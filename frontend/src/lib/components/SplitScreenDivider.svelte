@@ -3,40 +3,22 @@
 	import arrowLeft from '$lib/assets/icons/arrow-left.svg?raw';
 	import arrowRight from '$lib/assets/icons/arrow-right.svg?raw';
 	import refresh from '$lib/assets/icons/refresh.svg?raw';
+
+	let { onTopClick = () => {}, onBottomClick = () => {} } = $props();
 </script>
 
-<div class="divider-container" role="presentation" aria-hidden="true">
-	<!-- Top handle -->
-	<div class="handle handle-top">
-		<Icon src={arrowLeft} size={20} class="icon" />
-	</div>
+<!-- Top handle -->
+<button class="handle handle-top" onclick={onTopClick} aria-label="Top handle">
+	<Icon src={arrowLeft} size={20} />
+</button>
 
-	<!-- Bottom handle -->
-	<div class="handle handle-bottom">
-		<Icon src={refresh} size={20} class="icon" />
-		<Icon src={arrowRight} size={20} class="icon" />
-	</div>
-</div>
+<!-- Bottom handle -->
+<button class="handle handle-bottom" onclick={onBottomClick} aria-label="Bottom handle">
+	<Icon src={refresh} size={20} />
+	<Icon src={arrowRight} size={20} />
+</button>
 
 <style>
-	.divider-container {
-		position: absolute;
-		top: 0;
-		bottom: 0;
-		left: 50%;
-		width: 4px;
-		transform: translateX(-50%);
-		z-index: 10;
-		pointer-events: none;
-	}
-
-	/* Hide divider on mobile */
-	@media (max-width: 600px) {
-		.divider-container {
-			display: none;
-		}
-	}
-
 	.handle {
 		position: absolute;
 		left: 50%;
@@ -50,6 +32,20 @@
 		justify-content: center;
 		gap: 0.5rem;
 		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+		z-index: 10;
+		cursor: pointer;
+		border: none;
+		outline: none;
+		transition: all 0.2s ease;
+	}
+
+	.handle:hover {
+		transform: translateX(-50%) scale(1.05);
+		box-shadow: 0 6px 8px rgba(0, 0, 0, 0.4);
+	}
+
+	.handle :global(span) {
+		color: white;
 	}
 
 	.handle-top {
@@ -60,8 +56,14 @@
 		bottom: 2em;
 	}
 
-	.handle :global(.icon) {
-		color: white;
-		flex-shrink: 0;
+	/* Rotate handles on mobile */
+	@media (max-width: 600px) {
+		.handle {
+			transform: translateX(-50%) rotate(90deg);
+		}
+
+		.handle:hover {
+			transform: translateX(-50%) rotate(90deg) scale(1.05);
+		}
 	}
 </style>
