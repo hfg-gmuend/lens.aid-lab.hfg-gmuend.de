@@ -56,14 +56,10 @@
 		bottom: 2em;
 	}
 
-	/* Rotate handles on mobile */
+	/* Hide handles on mobile */
 	@media (max-width: 600px) {
 		.handle {
-			transform: translateX(-50%) rotate(90deg);
-		}
-
-		.handle:hover {
-			transform: translateX(-50%) rotate(90deg) scale(1.05);
+			display: none;
 		}
 	}
 </style>
