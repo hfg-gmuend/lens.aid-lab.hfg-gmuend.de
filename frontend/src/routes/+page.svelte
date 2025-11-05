@@ -744,8 +744,8 @@
 	}
 
 	.history-grid.large-view .history-image {
-		width: 30%;
-		max-width: 300px;
+		/* width: 30%;
+		max-width: 300px; */
 	}
 
 	.history-grid.large-view .history-arrow {
