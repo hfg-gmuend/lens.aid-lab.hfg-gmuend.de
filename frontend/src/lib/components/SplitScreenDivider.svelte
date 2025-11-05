@@ -9,13 +9,13 @@
 
 <!-- Top handle -->
 <button class="handle handle-top" onclick={onTopClick} aria-label="Top handle">
-	<Icon src={arrowLeft} size={20} />
+	<Icon src={arrowRight} width={50} height={20} inverted />
 </button>
 
 <!-- Bottom handle -->
 <button class="handle handle-bottom" onclick={onBottomClick} aria-label="Bottom handle">
 	<!-- <Icon src={refresh} size={20} /> -->
-	<Icon src={arrowRight} size={20} />
+	<Icon src={arrowRight} width={50} height={20} />
 </button>
 
 <style>

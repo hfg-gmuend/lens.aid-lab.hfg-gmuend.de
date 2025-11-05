@@ -16,7 +16,7 @@
 
 <div class="panel-controls controls-{position}">
 	{#if position === 'top-left'}
-		<button class="icon-button" class:active={!cameraActive} onclick={onUpload} aria-label="Upload">
+		<button class="icon-button" onclick={onUpload} aria-label="Upload">
 			<Icon src={upload} size={28} />
 		</button>
 		<button class="icon-button" class:active={cameraActive} onclick={onCamera} aria-label="Camera">

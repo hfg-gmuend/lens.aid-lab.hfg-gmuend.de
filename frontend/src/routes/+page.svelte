@@ -149,7 +149,7 @@
 			// Build query params
 			const params = new URLSearchParams({
 				client_id: CLIENT_ID,
-				text: promptValue || 'barbie kitchen',
+				text: promptValue,
 				seed: '-1',
 				denoise: denoise.toString(),
 				redirect: 'true'
