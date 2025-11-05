@@ -166,25 +166,18 @@
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
 
-			// Get the image URL from response
-			const responseText = await response.text();
-			let imageUrl;
+			// Parse JSON response
+			const data = await response.json();
 
-			// Try to parse as JSON first
-			try {
-				const jsonResponse = JSON.parse(responseText);
-				imageUrl = jsonResponse.url || jsonResponse.image_url || responseText;
-			} catch {
-				// If not JSON, assume it's a plain URL
-				imageUrl = responseText.trim();
-			}
+			// Construct full URLs from paths
+			const outputUrl = API_URL + data.output;
+			const inputUrl = API_URL + data.input;
 
 			// Display result
-			resultImage = imageUrl;
+			resultImage = outputUrl;
 
-			// Save to history
-			const inputDataUrl = canvasElement.toDataURL('image/jpeg', 0.8);
-			await saveToHistory(inputDataUrl, imageUrl, promptValue || 'barbie kitchen', denoise, seed);
+			// Save to history with actual values from API
+			await saveToHistory(inputUrl, outputUrl, data.prompt, data.denoise, data.seed);
 		} catch (error) {
 			console.error('Error transferring image:', error);
 			alert('Failed to transfer image. Please try again.');
