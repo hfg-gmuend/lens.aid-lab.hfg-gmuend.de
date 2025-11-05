@@ -10,9 +10,12 @@
 
 	const API_URL = 'https://api-h34hnr2j2nm2me2d.transferscope.org/';
 	const CLIENT_ID = 'web';
+	const HISTORY_KEY = 'futures-lens-history';
+	const MAX_HISTORY = 20;
 
 	let promptValue = $state('');
 	let denoise = $state(0.85); // 0.4-1.0 range, default 0.85
+	let seed = $state(-1);
 
 	let canvasElement = $state(null);
 	let videoElement = $state(null);
@@ -23,6 +26,7 @@
 	let cameraActive = $state(false);
 	let loading = $state(false);
 	let loopFrame = $state(null);
+	let history = $state([]);
 
 	const CANVAS_SIZE = 1024;
 
@@ -164,6 +168,10 @@
 			// Display result
 			const resultBlob = await response.blob();
 			resultImage = URL.createObjectURL(resultBlob);
+
+			// Save to history
+			const inputDataUrl = canvasElement.toDataURL('image/jpeg', 0.8);
+			await saveToHistory(inputDataUrl, resultImage, promptValue || 'barbie kitchen', denoise, seed);
 		} catch (error) {
 			console.error('Error transferring image:', error);
 			alert('Failed to transfer image. Please try again.');
@@ -199,10 +207,77 @@
 		link.click();
 	}
 
+	// History management
+	async function saveToHistory(inputImageUrl, resultImageUrl, prompt, denoiseVal, seedVal) {
+		const historyItem = {
+			id: Date.now(),
+			timestamp: new Date().toISOString(),
+			inputImage: inputImageUrl,
+			resultImage: resultImageUrl,
+			prompt,
+			denoise: denoiseVal,
+			seed: seedVal
+		};
+
+		// Add to beginning of array
+		history = [historyItem, ...history].slice(0, MAX_HISTORY);
+
+		// Save to localStorage
+		try {
+			localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+		} catch (error) {
+			console.error('Failed to save history to localStorage:', error);
+		}
+	}
+
+	function loadFromHistory(item) {
+		if (!context) return;
+
+		stopCamera();
+
+		// Load input image to canvas
+		const img = new Image();
+		img.src = item.inputImage;
+		img.onload = () => {
+			context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+			context.drawImage(img, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
+		};
+
+		// Load result image
+		resultImage = item.resultImage;
+
+		// Restore parameters
+		promptValue = item.prompt;
+		denoise = item.denoise;
+		seed = item.seed;
+	}
+
+	function loadHistoryFromStorage() {
+		try {
+			const stored = localStorage.getItem(HISTORY_KEY);
+			if (stored) {
+				history = JSON.parse(stored);
+			}
+		} catch (error) {
+			console.error('Failed to load history from localStorage:', error);
+			history = [];
+		}
+	}
+
+	function clearHistory() {
+		history = [];
+		try {
+			localStorage.removeItem(HISTORY_KEY);
+		} catch (error) {
+			console.error('Failed to clear history:', error);
+		}
+	}
+
 	onMount(() => {
 		if (canvasElement) {
 			context = canvasElement.getContext('2d', { willReadFrequently: true });
 		}
+		loadHistoryFromStorage();
 	});
 
 	onDestroy(() => {
@@ -310,6 +385,38 @@
 			<span class="slider-value">{denoise.toFixed(2)}</span>
 		</div>
 	</div>
+
+	<!-- History Section -->
+	{#if history.length > 0}
+		<div class="history-section">
+			<div class="history-header">
+				<h2 class="history-title">History</h2>
+				<button class="history-clear" onclick={clearHistory}>Clear All</button>
+			</div>
+			<div class="history-grid">
+				{#each history as item (item.id)}
+					<button
+						class="history-item"
+						onclick={() => loadFromHistory(item)}
+						onkeydown={(e) => e.key === 'Enter' && loadFromHistory(item)}
+						aria-label="Load history item: {item.prompt}"
+					>
+						<div class="history-images">
+							<img src={item.inputImage} alt="Input" class="history-image history-input" />
+							<div class="history-arrow">→</div>
+							<img src={item.resultImage} alt="Result" class="history-image history-result" />
+						</div>
+						<div class="history-info">
+							<p class="history-prompt">{item.prompt}</p>
+							<p class="history-params">
+								<span>Denoise: {item.denoise.toFixed(2)}</span>
+							</p>
+						</div>
+					</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -533,6 +640,112 @@
 		border: none;
 	}
 
+	/* History Section */
+	.history-section {
+		width: 100%;
+		max-width: 1400px;
+		margin-top: 2rem;
+	}
+
+	.history-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1rem;
+	}
+
+	.history-title {
+		font-size: 1.5rem;
+		font-weight: 300;
+		color: white;
+		margin: 0;
+	}
+
+	.history-clear {
+		padding: 0.5rem 1rem;
+		border-radius: 0.5rem;
+		border: 1px solid var(--color-accent);
+		background-color: transparent;
+		color: var(--color-accent);
+		cursor: pointer;
+		font-size: 0.9rem;
+		transition: all 0.2s ease;
+	}
+
+	.history-clear:hover {
+		background-color: var(--color-accent);
+		color: white;
+	}
+
+	.history-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+		gap: 1rem;
+	}
+
+	.history-item {
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 0.75rem;
+		overflow: hidden;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		background-color: rgba(255, 255, 255, 0.05);
+		width: 100%;
+		text-align: left;
+		padding: 0;
+	}
+
+	.history-item:hover {
+		border-color: var(--color-accent);
+		transform: scale(1.02);
+		background-color: rgba(255, 107, 74, 0.1);
+	}
+
+	.history-images {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.75rem;
+		gap: 0.5rem;
+		background-color: rgba(0, 0, 0, 0.3);
+	}
+
+	.history-image {
+		width: 45%;
+		aspect-ratio: 1 / 1;
+		object-fit: cover;
+		border-radius: 0.5rem;
+	}
+
+	.history-arrow {
+		color: var(--color-accent);
+		font-size: 1.5rem;
+		font-weight: bold;
+	}
+
+	.history-info {
+		padding: 0.75rem;
+	}
+
+	.history-prompt {
+		color: white;
+		font-size: 0.9rem;
+		margin: 0 0 0.5rem 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.history-params {
+		color: rgba(255, 255, 255, 0.6);
+		font-size: 0.8rem;
+		margin: 0;
+	}
+
+	.history-params span {
+		margin-right: 1rem;
+	}
+
 	/* Responsive layout for mobile */
 	@media (max-width: 600px) {
 		.main-viewport {
@@ -553,6 +766,10 @@
 		.slider-container {
 			width: 100%;
 			min-width: unset;
+		}
+
+		.history-grid {
+			grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 		}
 	}
 </style>
