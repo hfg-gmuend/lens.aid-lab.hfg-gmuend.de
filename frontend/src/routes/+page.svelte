@@ -107,15 +107,14 @@
 		position: relative;
 		width: 100%;
 		max-width: 1400px;
-		height: 600px;
 		border-radius: 1.5rem;
 		overflow: hidden;
 		display: flex;
 	}
 
 	.panel {
-		height: 100%;
 		width: 50%;
+		aspect-ratio: 1 / 1;
 		position: relative;
 	}
 
@@ -241,13 +240,11 @@
 	@media (max-width: 600px) {
 		.main-viewport {
 			flex-direction: column;
-			height: auto;
-			min-height: 600px;
 		}
 
 		.panel {
 			width: 100% !important;
-			min-height: 300px;
+			aspect-ratio: 1 / 1;
 		}
 
 		.control-bar {
