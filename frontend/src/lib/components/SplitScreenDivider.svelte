@@ -1,19 +1,20 @@
 <script>
-	import ArrowLeftIcon from './icons/ArrowLeftIcon.svelte';
-	import ArrowRightIcon from './icons/ArrowRightIcon.svelte';
-	import RefreshIcon from './icons/RefreshIcon.svelte';
+	import Icon from './Icon.svelte';
+	import arrowLeft from '$lib/assets/icons/arrow-left.svg?raw';
+	import arrowRight from '$lib/assets/icons/arrow-right.svg?raw';
+	import refresh from '$lib/assets/icons/refresh.svg?raw';
 </script>
 
 <div class="divider-container" role="presentation" aria-hidden="true">
 	<!-- Top handle -->
 	<div class="handle handle-top">
-		<ArrowLeftIcon size={20} class="icon" />
+		<Icon src={arrowLeft} size={20} class="icon" />
 	</div>
 
 	<!-- Bottom handle -->
 	<div class="handle handle-bottom">
-		<RefreshIcon size={20} class="icon" />
-		<ArrowRightIcon size={20} class="icon" />
+		<Icon src={refresh} size={20} class="icon" />
+		<Icon src={arrowRight} size={20} class="icon" />
 	</div>
 </div>
 

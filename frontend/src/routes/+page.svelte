@@ -1,9 +1,10 @@
 <script>
 	import SplitScreenDivider from '$lib/components/SplitScreenDivider.svelte';
-	import UploadIcon from '$lib/components/icons/UploadIcon.svelte';
-	import CameraIcon from '$lib/components/icons/CameraIcon.svelte';
-	import CheckIcon from '$lib/components/icons/CheckIcon.svelte';
-	import DownloadIcon from '$lib/components/icons/DownloadIcon.svelte';
+	import Icon from '$lib/components/Icon.svelte';
+	import upload from '$lib/assets/icons/upload.svg?raw';
+	import camera from '$lib/assets/icons/camera.svg?raw';
+	import check from '$lib/assets/icons/check.svg?raw';
+	import download from '$lib/assets/icons/download.svg?raw';
 
 	let promptValue = $state('');
 	let sliderValue = $state(80); // default near "Unfamiliar"
@@ -35,10 +36,10 @@
 		<div class="panel panel-left">
 			<div class="panel-controls controls-top-left">
 				<button class="icon-button" onclick={handleUpload} aria-label="Upload">
-					<UploadIcon size={28} />
+					<Icon src={upload} size={28} />
 				</button>
 				<button class="icon-button" onclick={handleCamera} aria-label="Camera">
-					<CameraIcon size={28} />
+					<Icon src={camera} size={28} />
 				</button>
 			</div>
 		</div>
@@ -47,10 +48,10 @@
 		<div class="panel panel-right">
 			<div class="panel-controls controls-bottom-right">
 				<button class="icon-button" onclick={handleCheck} aria-label="Check">
-					<CheckIcon size={28} />
+					<Icon src={check} size={28} />
 				</button>
 				<button class="icon-button" onclick={handleDownload} aria-label="Download">
-					<DownloadIcon size={28} />
+					<Icon src={download} size={28} />
 				</button>
 			</div>
 		</div>
