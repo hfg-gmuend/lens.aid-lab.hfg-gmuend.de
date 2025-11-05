@@ -1,44 +1,256 @@
 <script>
+	import { onMount, onDestroy } from 'svelte';
 	import SplitScreenDivider from '$lib/components/SplitScreenDivider.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import upload from '$lib/assets/icons/upload.svg?raw';
 	import camera from '$lib/assets/icons/camera.svg?raw';
 	import check from '$lib/assets/icons/check.svg?raw';
 	import download from '$lib/assets/icons/download.svg?raw';
+	import refresh from '$lib/assets/icons/refresh.svg?raw';
+
+	const API_URL = 'https://api-h34hnr2j2nm2me2d.transferscope.org/';
+	const CLIENT_ID = 'web';
 
 	let promptValue = $state('');
-	let sliderValue = $state(80); // default near "Unfamiliar"
+	let denoise = $state(0.85); // 0.4-1.0 range, default 0.85
 
+	let canvasElement = $state(null);
+	let videoElement = $state(null);
+	let context = $state(null);
+	let videoStream = $state(null);
+
+	let resultImage = $state(null);
+	let cameraActive = $state(false);
+	let loading = $state(false);
+	let loopFrame = $state(null);
+
+	const CANVAS_SIZE = 1024;
+
+	// Start camera and live preview
+	async function handleCamera() {
+		if (cameraActive) {
+			stopCamera();
+			return;
+		}
+
+		try {
+			videoStream = await navigator.mediaDevices.getUserMedia({
+				audio: false,
+				video: {
+					facingMode: 'environment',
+					width: CANVAS_SIZE,
+					height: CANVAS_SIZE
+				}
+			});
+			videoElement.srcObject = videoStream;
+			videoElement.play();
+			cameraActive = true;
+			startLoop();
+		} catch (error) {
+			console.error('Error accessing camera:', error);
+			alert('Failed to access camera. Please check permissions.');
+		}
+	}
+
+	function stopCamera() {
+		if (videoStream) {
+			videoStream.getTracks().forEach((track) => track.stop());
+			videoStream = null;
+		}
+		cameraActive = false;
+		stopLoop();
+	}
+
+	function startLoop() {
+		function loop() {
+			if (cameraActive && !loading && context && videoElement) {
+				context.drawImage(videoElement, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
+			}
+			loopFrame = requestAnimationFrame(loop);
+		}
+		loopFrame = requestAnimationFrame(loop);
+	}
+
+	function stopLoop() {
+		if (loopFrame) {
+			cancelAnimationFrame(loopFrame);
+			loopFrame = null;
+		}
+	}
+
+	// Upload image
 	function handleUpload() {
-		console.log('Upload clicked');
+		stopCamera();
+		const input = document.createElement('input');
+		input.type = 'file';
+		input.accept = 'image/*';
+		input.onchange = async (e) => {
+			const file = e.target.files?.[0];
+			if (!file) return;
+
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				const image = new Image();
+				image.src = e.target.result;
+				image.onload = () => {
+					if (!context) return;
+
+					// Calculate aspect ratio fit
+					const aspectRatio = image.width / image.height;
+					let drawWidth, drawHeight, offsetX, offsetY;
+
+					if (aspectRatio > 1) {
+						drawWidth = CANVAS_SIZE * aspectRatio;
+						drawHeight = CANVAS_SIZE;
+						offsetX = (CANVAS_SIZE - drawWidth) / 2;
+						offsetY = 0;
+					} else {
+						drawWidth = CANVAS_SIZE;
+						drawHeight = CANVAS_SIZE / aspectRatio;
+						offsetX = 0;
+						offsetY = (CANVAS_SIZE - drawHeight) / 2;
+					}
+
+					context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+					context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+				};
+			};
+			reader.readAsDataURL(file);
+		};
+		input.click();
 	}
 
-	function handleCamera() {
-		console.log('Camera clicked');
+	// Transfer - send canvas to API
+	async function handleTransfer() {
+		if (loading || !canvasElement) return;
+
+		// Freeze camera if active
+		if (cameraActive) {
+			stopCamera();
+		}
+
+		loading = true;
+
+		try {
+			// Get image from canvas
+			const imageBlob = await new Promise((resolve) => {
+				canvasElement.toBlob(resolve, 'image/jpeg', 0.8);
+			});
+
+			// Prepare form data
+			const formData = new FormData();
+			formData.append('file', imageBlob);
+
+			// Build query params
+			const params = new URLSearchParams({
+				client_id: CLIENT_ID,
+				text: promptValue || 'barbie kitchen',
+				seed: '-1',
+				denoise: denoise.toString()
+			});
+
+			// Send to API
+			const response = await fetch(`${API_URL}lens?${params.toString()}`, {
+				mode: 'cors',
+				method: 'POST',
+				body: formData,
+				credentials: 'include'
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			// Display result
+			const resultBlob = await response.blob();
+			resultImage = URL.createObjectURL(resultBlob);
+		} catch (error) {
+			console.error('Error transferring image:', error);
+			alert('Failed to transfer image. Please try again.');
+		} finally {
+			loading = false;
+		}
 	}
 
-	function handleCheck() {
-		console.log('Check clicked');
+	// Reuse - copy right panel to left canvas
+	function handleReuse() {
+		if (!resultImage || !context) return;
+
+		stopCamera();
+
+		const image = new Image();
+		image.src = resultImage;
+		image.onload = () => {
+			context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+			context.drawImage(image, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
+		};
 	}
 
+	// Download result image
 	function handleDownload() {
-		console.log('Download clicked');
+		if (!resultImage) return;
+
+		const link = document.createElement('a');
+		link.href = resultImage;
+		const filename = promptValue
+			? `futures-lens-${promptValue.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`
+			: 'futures-lens.jpg';
+		link.download = filename;
+		link.click();
 	}
+
+	onMount(() => {
+		if (canvasElement) {
+			context = canvasElement.getContext('2d', { willReadFrequently: true });
+		}
+	});
+
+	onDestroy(() => {
+		stopLoop();
+		stopCamera();
+		if (resultImage) {
+			URL.revokeObjectURL(resultImage);
+		}
+	});
 </script>
 
 <div class="page-container">
 	<!-- Title -->
 	<h1 class="title">futures lens</h1>
 
+	<!-- Hidden video element for camera -->
+	<video
+		bind:this={videoElement}
+		width={CANVAS_SIZE}
+		height={CANVAS_SIZE}
+		autoplay
+		playsinline
+		muted
+		style="display: none;"
+	></video>
+
 	<!-- Main viewport with split-screen -->
 	<div class="main-viewport">
 		<!-- Left Panel (Input) -->
 		<div class="panel panel-left">
+			<canvas bind:this={canvasElement} width={CANVAS_SIZE} height={CANVAS_SIZE} class="canvas">
+			</canvas>
+
 			<div class="panel-controls controls-top-left">
-				<button class="icon-button" onclick={handleUpload} aria-label="Upload">
+				<button
+					class="icon-button"
+					class:active={!cameraActive}
+					onclick={handleUpload}
+					aria-label="Upload"
+				>
 					<Icon src={upload} size={28} />
 				</button>
-				<button class="icon-button" onclick={handleCamera} aria-label="Camera">
+				<button
+					class="icon-button"
+					class:active={cameraActive}
+					onclick={handleCamera}
+					aria-label="Camera"
+				>
 					<Icon src={camera} size={28} />
 				</button>
 			</div>
@@ -46,18 +258,32 @@
 
 		<!-- Right Panel (Output) -->
 		<div class="panel panel-right">
+			{#if loading}
+				<div class="loading-indicator">
+					<Icon src={refresh} size={48} class="spin" />
+				</div>
+			{:else if resultImage}
+				<img src={resultImage} alt="Result" class="result-image" />
+			{:else}
+				<div class="empty-state">
+					<p>Click transfer to generate</p>
+				</div>
+			{/if}
+
 			<div class="panel-controls controls-bottom-right">
-				<button class="icon-button" onclick={handleCheck} aria-label="Check">
-					<Icon src={check} size={28} />
-				</button>
-				<button class="icon-button" onclick={handleDownload} aria-label="Download">
+				<button
+					class="icon-button"
+					onclick={handleDownload}
+					disabled={!resultImage}
+					aria-label="Download"
+				>
 					<Icon src={download} size={28} />
 				</button>
 			</div>
 		</div>
 
-		<!-- Decorative divider with handles -->
-		<SplitScreenDivider />
+		<!-- Handles with functionality -->
+		<SplitScreenDivider onTopClick={handleReuse} onBottomClick={handleTransfer} />
 	</div>
 
 	<!-- Bottom control bar -->
@@ -70,16 +296,18 @@
 		/>
 
 		<div class="slider-container">
-			<label for="familiarity-slider" class="slider-label">Familiar</label>
+			<label for="denoise-slider" class="slider-label">Familiar</label>
 			<input
-				id="familiarity-slider"
+				id="denoise-slider"
 				type="range"
-				min="0"
-				max="100"
-				bind:value={sliderValue}
+				min="0.4"
+				max="1"
+				step="0.05"
+				bind:value={denoise}
 				class="familiarity-slider"
 			/>
-			<label for="familiarity-slider" class="slider-label">Unfamiliar</label>
+			<label for="denoise-slider" class="slider-label">Unfamiliar</label>
+			<span class="slider-value">{denoise.toFixed(2)}</span>
 		</div>
 	</div>
 </div>
@@ -125,6 +353,53 @@
 
 	.panel-right {
 		background-color: var(--color-panel-dark);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.canvas,
+	.result-image {
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+	}
+
+	.canvas {
+		position: absolute;
+		top: 0;
+		left: 0;
+	}
+
+	.result-image {
+		max-width: 100%;
+		max-height: 100%;
+	}
+
+	.loading-indicator {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--color-accent);
+	}
+
+	.loading-indicator :global(.spin) {
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.empty-state {
+		color: rgba(255, 255, 255, 0.5);
+		text-align: center;
+		font-size: 1.1rem;
 	}
 
 	.panel-controls {
@@ -161,6 +436,20 @@
 		background-color: var(--color-accent);
 		color: white;
 		transform: scale(1.05);
+	}
+
+	.icon-button.active {
+		background-color: var(--color-accent);
+		color: white;
+	}
+
+	.icon-button:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.icon-button:disabled:hover {
+		transform: none;
 	}
 
 	.control-bar {
@@ -205,6 +494,13 @@
 		color: white;
 		font-size: 1rem;
 		white-space: nowrap;
+	}
+
+	.slider-value {
+		color: var(--color-accent);
+		font-size: 0.9rem;
+		min-width: 3rem;
+		text-align: right;
 	}
 
 	.familiarity-slider {
