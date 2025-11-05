@@ -42,7 +42,8 @@
 		transform: translateX(-50%);
 		background-color: var(--color-accent);
 		border-radius: 999px;
-		padding: 0.75rem 2rem;
+		width: 10em;
+		padding: 0.75rem 1rem;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -51,11 +52,11 @@
 	}
 
 	.handle-top {
-		top: 10%;
+		top: 2em;
 	}
 
 	.handle-bottom {
-		bottom: 10%;
+		bottom: 2em;
 	}
 
 	.handle :global(.icon) {
