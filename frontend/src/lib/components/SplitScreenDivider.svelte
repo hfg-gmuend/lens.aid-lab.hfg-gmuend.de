@@ -31,7 +31,6 @@
 		align-items: center;
 		justify-content: center;
 		gap: 0.5rem;
-		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 		z-index: 10;
 		cursor: pointer;
 		border: none;
@@ -41,7 +40,6 @@
 
 	.handle:hover {
 		transform: translateX(-50%) scale(1.05);
-		box-shadow: 0 6px 8px rgba(0, 0, 0, 0.4);
 	}
 
 	.handle :global(span) {
