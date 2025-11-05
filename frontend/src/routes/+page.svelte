@@ -150,7 +150,8 @@
 				client_id: CLIENT_ID,
 				text: promptValue || 'barbie kitchen',
 				seed: '-1',
-				denoise: denoise.toString()
+				denoise: denoise.toString(),
+				redirect: 'true'
 			});
 
 			// Send to API
@@ -165,13 +166,25 @@
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
 
+			// Get the image URL from response
+			const responseText = await response.text();
+			let imageUrl;
+
+			// Try to parse as JSON first
+			try {
+				const jsonResponse = JSON.parse(responseText);
+				imageUrl = jsonResponse.url || jsonResponse.image_url || responseText;
+			} catch {
+				// If not JSON, assume it's a plain URL
+				imageUrl = responseText.trim();
+			}
+
 			// Display result
-			const resultBlob = await response.blob();
-			resultImage = URL.createObjectURL(resultBlob);
+			resultImage = imageUrl;
 
 			// Save to history
 			const inputDataUrl = canvasElement.toDataURL('image/jpeg', 0.8);
-			await saveToHistory(inputDataUrl, resultImage, promptValue || 'barbie kitchen', denoise, seed);
+			await saveToHistory(inputDataUrl, imageUrl, promptValue || 'barbie kitchen', denoise, seed);
 		} catch (error) {
 			console.error('Error transferring image:', error);
 			alert('Failed to transfer image. Please try again.');
@@ -283,9 +296,6 @@
 	onDestroy(() => {
 		stopLoop();
 		stopCamera();
-		if (resultImage) {
-			URL.revokeObjectURL(resultImage);
-		}
 	});
 </script>
 
