@@ -169,9 +169,9 @@
 			// Parse JSON response
 			const data = await response.json();
 
-			// Construct full URLs from paths
-			const outputUrl = API_URL + data.output;
-			const inputUrl = API_URL + data.input;
+			// Construct full URLs from paths (remove leading slash to avoid double slashes)
+			const outputUrl = API_URL + data.output.replace(/^\//, '');
+			const inputUrl = API_URL + data.input.replace(/^\//, '');
 
 			// Display result
 			resultImage = outputUrl;
