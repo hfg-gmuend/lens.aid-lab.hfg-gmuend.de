@@ -193,6 +193,7 @@
 		stopCamera();
 
 		const image = new Image();
+		image.crossOrigin = 'anonymous'; // Enable CORS to avoid tainted canvas
 		image.src = resultImage;
 		image.onload = () => {
 			context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
@@ -243,6 +244,7 @@
 
 		// Load input image to canvas
 		const img = new Image();
+		img.crossOrigin = 'anonymous'; // Enable CORS to avoid tainted canvas
 		img.src = item.inputImage;
 		img.onload = () => {
 			context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
