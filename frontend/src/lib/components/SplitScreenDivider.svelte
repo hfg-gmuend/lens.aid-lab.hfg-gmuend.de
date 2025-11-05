@@ -2,41 +2,9 @@
 	import ArrowLeftIcon from './icons/ArrowLeftIcon.svelte';
 	import ArrowRightIcon from './icons/ArrowRightIcon.svelte';
 	import RefreshIcon from './icons/RefreshIcon.svelte';
-
-	let { onDrag = (deltaX) => {} } = $props();
-
-	let isDragging = $state(false);
-	let startX = $state(0);
-
-	function handlePointerDown(e) {
-		isDragging = true;
-		startX = e.clientX;
-		e.currentTarget.setPointerCapture(e.pointerId);
-	}
-
-	function handlePointerMove(e) {
-		if (!isDragging) return;
-
-		const deltaX = e.clientX - startX;
-		startX = e.clientX;
-		onDrag(deltaX);
-	}
-
-	function handlePointerUp(e) {
-		isDragging = false;
-		e.currentTarget.releasePointerCapture(e.pointerId);
-	}
 </script>
 
-<div
-	class="divider-container"
-	role="separator"
-	aria-orientation="vertical"
-	onpointerdown={handlePointerDown}
-	onpointermove={handlePointerMove}
-	onpointerup={handlePointerUp}
-	style="cursor: col-resize;"
->
+<div class="divider-container" role="presentation" aria-hidden="true">
 	<!-- Top handle -->
 	<div class="handle handle-top">
 		<ArrowLeftIcon size={20} class="icon" />
@@ -58,8 +26,7 @@
 		width: 4px;
 		transform: translateX(-50%);
 		z-index: 10;
-		touch-action: none;
-		user-select: none;
+		pointer-events: none;
 	}
 
 	/* Hide divider on mobile */
@@ -80,7 +47,6 @@
 		align-items: center;
 		justify-content: center;
 		gap: 0.5rem;
-		cursor: col-resize;
 		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 	}
 

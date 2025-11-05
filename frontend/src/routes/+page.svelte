@@ -5,18 +5,8 @@
 	import CheckIcon from '$lib/components/icons/CheckIcon.svelte';
 	import DownloadIcon from '$lib/components/icons/DownloadIcon.svelte';
 
-	let leftPanelWidth = $state(50); // percentage
 	let promptValue = $state('');
 	let sliderValue = $state(80); // default near "Unfamiliar"
-
-	function handleDrag(deltaX) {
-		const container = document.querySelector('.main-viewport');
-		if (!container) return;
-
-		const containerWidth = container.offsetWidth;
-		const deltaPercent = (deltaX / containerWidth) * 100;
-		leftPanelWidth = Math.max(20, Math.min(80, leftPanelWidth + deltaPercent));
-	}
 
 	function handleUpload() {
 		console.log('Upload clicked');
@@ -42,7 +32,7 @@
 	<!-- Main viewport with split-screen -->
 	<div class="main-viewport">
 		<!-- Left Panel (Input) -->
-		<div class="panel panel-left" style="width: {leftPanelWidth}%;">
+		<div class="panel panel-left">
 			<div class="panel-controls controls-top-left">
 				<button class="icon-button" onclick={handleUpload} aria-label="Upload">
 					<UploadIcon size={28} />
@@ -54,7 +44,7 @@
 		</div>
 
 		<!-- Right Panel (Output) -->
-		<div class="panel panel-right" style="width: {100 - leftPanelWidth}%;">
+		<div class="panel panel-right">
 			<div class="panel-controls controls-bottom-right">
 				<button class="icon-button" onclick={handleCheck} aria-label="Check">
 					<CheckIcon size={28} />
@@ -65,8 +55,8 @@
 			</div>
 		</div>
 
-		<!-- Draggable divider -->
-		<SplitScreenDivider onDrag={handleDrag} />
+		<!-- Decorative divider with handles -->
+		<SplitScreenDivider />
 	</div>
 
 	<!-- Bottom control bar -->
@@ -125,8 +115,8 @@
 
 	.panel {
 		height: 100%;
+		width: 50%;
 		position: relative;
-		transition: width 0.05s ease-out;
 	}
 
 	.panel-left {
