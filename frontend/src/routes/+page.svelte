@@ -7,6 +7,8 @@
 	import check from '$lib/assets/icons/check.svg?raw';
 	import download from '$lib/assets/icons/download.svg?raw';
 	import refresh from '$lib/assets/icons/refresh.svg?raw';
+	import grid from '$lib/assets/icons/grid.svg?raw';
+	import rows from '$lib/assets/icons/rows.svg?raw';
 
 	const API_URL = 'https://api-h34hnr2j2nm2me2d.transferscope.org/';
 	const CLIENT_ID = 'web';
@@ -27,6 +29,8 @@
 	let loading = $state(false);
 	let loopFrame = $state(null);
 	let history = $state([]);
+	let historyViewMode = $state('grid'); // 'grid' or 'large'
+
 
 	const CANVAS_SIZE = 1024;
 
@@ -281,6 +285,10 @@
 		}
 	}
 
+	function toggleHistoryView() {
+		historyViewMode = historyViewMode === 'grid' ? 'large' : 'grid';
+	}
+
 	onMount(() => {
 		if (canvasElement) {
 			context = canvasElement.getContext('2d', { willReadFrequently: true });
@@ -396,9 +404,18 @@
 		<div class="history-section">
 			<div class="history-header">
 				<h2 class="history-title">History</h2>
-				<button class="history-clear" onclick={clearHistory}>Clear All</button>
+				<div class="history-controls">
+					<button
+						class="history-toggle"
+						onclick={toggleHistoryView}
+						aria-label="Toggle history view"
+					>
+						<Icon src={historyViewMode === 'grid' ? rows : grid} size={20} />
+					</button>
+					<button class="history-clear" onclick={clearHistory}>Clear All</button>
+				</div>
 			</div>
-			<div class="history-grid">
+			<div class="history-grid" class:large-view={historyViewMode === 'large'}>
 				{#each history as item (item.id)}
 					<button
 						class="history-item"
@@ -414,7 +431,7 @@
 						<div class="history-info">
 							<p class="history-prompt">{item.prompt}</p>
 							<p class="history-params">
-								<span>Denoise: {item.denoise.toFixed(2)}</span>
+								<span>Familiarity: {item.denoise.toFixed(2)}</span>
 							</p>
 						</div>
 					</button>
@@ -666,6 +683,31 @@
 		margin: 0;
 	}
 
+	.history-controls {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+	}
+
+	.history-toggle {
+		width: 2.5rem;
+		height: 2.5rem;
+		border-radius: 0.5rem;
+		border: 1px solid var(--color-accent);
+		background-color: transparent;
+		color: var(--color-accent);
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: all 0.2s ease;
+	}
+
+	.history-toggle:hover {
+		background-color: var(--color-accent);
+		color: white;
+	}
+
 	.history-clear {
 		padding: 0.5rem 1rem;
 		border-radius: 0.5rem;
@@ -686,6 +728,41 @@
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 		gap: 1rem;
+	}
+
+	.history-grid.large-view {
+		grid-template-columns: 1fr;
+	}
+
+	.history-grid.large-view .history-item {
+		max-width: 100%;
+	}
+
+	.history-grid.large-view .history-images {
+		padding: 1.5rem;
+		gap: 1rem;
+	}
+
+	.history-grid.large-view .history-image {
+		width: 30%;
+		max-width: 300px;
+	}
+
+	.history-grid.large-view .history-arrow {
+		font-size: 2rem;
+	}
+
+	.history-grid.large-view .history-info {
+		padding: 1.5rem;
+	}
+
+	.history-grid.large-view .history-prompt {
+		font-size: 1.1rem;
+		white-space: normal;
+	}
+
+	.history-grid.large-view .history-params {
+		font-size: 0.95rem;
 	}
 
 	.history-item {
