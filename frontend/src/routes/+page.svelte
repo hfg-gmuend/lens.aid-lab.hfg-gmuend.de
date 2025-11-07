@@ -27,9 +27,42 @@
 	let loopFrame = $state(null);
 	let history = $state([]);
 	let historyViewMode = $state('grid'); // 'grid' or 'large'
+	let historyGroupMode = $state('grouped'); // 'grouped' or 'standard'
+	let currentInputHash = $state(null); // Track hash of current canvas content
 
 
 	const CANVAS_SIZE = 1024;
+
+	// Generate a hash from canvas image data to identify unique inputs
+	async function generateInputImageHash() {
+		if (!canvasElement) return null;
+		
+		try {
+			// Get image data from a smaller sample to create hash
+			const tempCanvas = document.createElement('canvas');
+			tempCanvas.width = 32;
+			tempCanvas.height = 32;
+			const tempContext = tempCanvas.getContext('2d');
+			tempContext.drawImage(canvasElement, 0, 0, 32, 32);
+			
+			// Get pixel data
+			const imageData = tempContext.getImageData(0, 0, 32, 32);
+			const data = imageData.data;
+			
+			// Create simple hash from pixel data
+			let hash = 0;
+			for (let i = 0; i < data.length; i += 4) {
+				// Sample every 4th pixel to speed up
+				hash = ((hash << 5) - hash) + data[i] + data[i+1] + data[i+2];
+				hash = hash & hash; // Convert to 32bit integer
+			}
+			
+			return hash.toString(36);
+		} catch (error) {
+			console.error('Failed to generate image hash:', error);
+			return Date.now().toString(); // Fallback to timestamp
+		}
+	}
 
 	// Start camera and live preview
 	async function handleCamera() {
@@ -97,7 +130,7 @@
 			reader.onload = (e) => {
 				const image = new Image();
 				image.src = e.target.result;
-				image.onload = () => {
+				image.onload = async () => {
 					if (!context) return;
 
 					// Calculate aspect ratio fit
@@ -118,6 +151,8 @@
 
 					context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 					context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+					// Update the current input hash after loading new content
+					currentInputHash = await generateInputImageHash();
 				};
 			};
 			reader.readAsDataURL(file);
@@ -132,6 +167,16 @@
 		// Freeze camera if active
 		if (cameraActive) {
 			stopCamera();
+		}
+
+		// Use existing hash if available (from loaded history item), otherwise generate new one
+		let inputHash = currentInputHash;
+		if (!inputHash) {
+			inputHash = await generateInputImageHash();
+			if (!inputHash) {
+				alert('Failed to process image. Please try again.');
+				return;
+			}
 		}
 
 		loading = true;
@@ -177,8 +222,8 @@
 			// Display result
 			resultImage = outputUrl;
 
-			// Save to history with actual values from API
-			await saveToHistory(inputUrl, outputUrl, data.prompt, data.denoise, data.seed);
+			// Save to history with actual values from API and our input hash
+			await saveToHistory(inputHash, inputUrl, outputUrl, data.prompt, data.denoise, data.seed);
 		} catch (error) {
 			console.error('Error transferring image:', error);
 			alert('Failed to transfer image. Please try again.');
@@ -196,9 +241,11 @@
 		const image = new Image();
 		image.crossOrigin = 'anonymous'; // Enable CORS to avoid tainted canvas
 		image.src = resultImage;
-		image.onload = () => {
+		image.onload = async () => {
 			context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 			context.drawImage(image, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
+			// Update the current input hash after loading new content to canvas
+			currentInputHash = await generateInputImageHash();
 		};
 	}
 
@@ -216,19 +263,38 @@
 	}
 
 	// History management
-	async function saveToHistory(inputImageUrl, resultImageUrl, prompt, denoiseVal, seedVal) {
-		const historyItem = {
+	async function saveToHistory(inputHash, inputImageUrl, resultImageUrl, prompt, denoiseVal, seedVal) {
+		const variation = {
 			id: Date.now(),
 			timestamp: new Date().toISOString(),
-			inputImage: inputImageUrl,
 			resultImage: resultImageUrl,
 			prompt,
 			denoise: denoiseVal,
 			seed: seedVal
 		};
 
-		// Add to beginning of array
-		history = [historyItem, ...history].slice(0, MAX_HISTORY);
+		// Check if we already have a group with this input hash
+		const existingGroupIndex = history.findIndex(group => group.inputHash === inputHash);
+
+		if (existingGroupIndex !== -1) {
+			// Add to existing group, but update the inputImage URL to the latest one
+			history[existingGroupIndex].variations = [variation, ...history[existingGroupIndex].variations];
+			history[existingGroupIndex].timestamp = new Date().toISOString(); // Update group timestamp
+			history[existingGroupIndex].inputImage = inputImageUrl; // Update to latest URL
+		} else {
+			// Create new group
+			const newGroup = {
+				id: Date.now(),
+				timestamp: new Date().toISOString(),
+				inputHash: inputHash,
+				inputImage: inputImageUrl,
+				variations: [variation]
+			};
+			history = [newGroup, ...history];
+		}
+
+		// Limit total groups
+		history = history.slice(0, MAX_HISTORY);
 
 		// Save to localStorage
 		try {
@@ -247,9 +313,15 @@
 		const img = new Image();
 		img.crossOrigin = 'anonymous'; // Enable CORS to avoid tainted canvas
 		img.src = item.inputImage;
-		img.onload = () => {
+		img.onload = async () => {
 			context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 			context.drawImage(img, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
+			// Use the hash from the history item if available, otherwise generate new one
+			if (item.inputHash) {
+				currentInputHash = item.inputHash;
+			} else {
+				currentInputHash = await generateInputImageHash();
+			}
 		};
 
 		// Load result image
@@ -265,12 +337,61 @@
 		try {
 			const stored = localStorage.getItem(HISTORY_KEY);
 			if (stored) {
-				history = JSON.parse(stored);
+				const parsed = JSON.parse(stored);
+				// Migrate old format to new format if needed
+				history = migrateHistoryFormat(parsed);
 			}
 		} catch (error) {
 			console.error('Failed to load history from localStorage:', error);
 			history = [];
 		}
+	}
+
+	// Migrate old history format to new grouped format
+	function migrateHistoryFormat(data) {
+		if (!data || data.length === 0) return [];
+		
+		// Check if data is already in new format
+		if (data[0].variations) {
+			// Ensure all groups have an inputHash (for data saved before hash implementation)
+			return data.map(group => {
+				if (!group.inputHash) {
+					// Use inputImage URL as fallback hash for old grouped data
+					group.inputHash = 'legacy_' + btoa(group.inputImage).substring(0, 16);
+				}
+				return group;
+			});
+		}
+
+		// Convert old format to new format
+		// Group by inputImage URL since we don't have hash for old data
+		const groups = {};
+		
+		data.forEach(item => {
+			const inputImage = item.inputImage;
+			const fallbackHash = 'legacy_' + btoa(inputImage).substring(0, 16);
+			
+			if (!groups[fallbackHash]) {
+				groups[fallbackHash] = {
+					id: item.id,
+					timestamp: item.timestamp,
+					inputHash: fallbackHash,
+					inputImage: inputImage,
+					variations: []
+				};
+			}
+
+			groups[fallbackHash].variations.push({
+				id: item.id,
+				timestamp: item.timestamp,
+				resultImage: item.resultImage,
+				prompt: item.prompt,
+				denoise: item.denoise,
+				seed: item.seed
+			});
+		});
+
+		return Object.values(groups);
 	}
 
 	function clearHistory() {
@@ -283,7 +404,26 @@
 	}
 
 	function deleteHistoryItem(itemId) {
-		history = history.filter(item => item.id !== itemId);
+		history = history.map(group => {
+			// Remove variation from group
+			const updatedVariations = group.variations.filter(v => v.id !== itemId);
+			
+			// If group has no variations left, it will be filtered out below
+			return {
+				...group,
+				variations: updatedVariations
+			};
+		}).filter(group => group.variations.length > 0); // Remove empty groups
+
+		try {
+			localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+		} catch (error) {
+			console.error('Failed to update history:', error);
+		}
+	}
+
+	function deleteHistoryGroup(groupId) {
+		history = history.filter(group => group.id !== groupId);
 		try {
 			localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
 		} catch (error) {
@@ -308,7 +448,10 @@
 	<!-- Title -->
 	<div class="header">
 		<h1 class="title">futures lens</h1>
-		<a href="/about" class="about-link">About</a>
+		<div class="header-links">
+			<a href="/canvas" class="about-link">Canvas</a>
+			<a href="/about" class="about-link">About</a>
+		</div>
 	</div>
 
 	<!-- Hidden video element for camera -->
@@ -369,8 +512,10 @@
 	<History
 		{history}
 		bind:viewMode={historyViewMode}
+		bind:groupMode={historyGroupMode}
 		onLoadItem={loadFromHistory}
 		onDeleteItem={deleteHistoryItem}
+		onDeleteGroup={deleteHistoryGroup}
 		onClearHistory={clearHistory}
 	/>
 </div>
@@ -393,6 +538,12 @@
 		justify-content: space-between;
 		align-items: center;
 		gap: 1rem;
+	}
+
+	.header-links {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
 	}
 
 	.title {

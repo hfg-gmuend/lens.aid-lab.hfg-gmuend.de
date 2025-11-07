@@ -1,15 +1,13 @@
 <script>
-	import { goto } from '$app/navigation';
 </script>
 
 <div class="about-container">
-	<div class="about-content">
-		<button class="back-button" onclick={() => goto('/')}>
-			← Back
-		</button>
-		
+	<div class="header">
 		<h1 class="title">About Futures Lens</h1>
-		
+		<a href="/" class="back-link">← Back to App</a>
+	</div>
+	
+	<div class="about-content">
 		<div class="about-text">
 			<p>
 				Futures Lens is an interactive tool for exploring and generating future scenarios through AI-powered image transformation.
@@ -53,32 +51,39 @@
 	.about-content {
 		width: 100%;
 		max-width: 800px;
-		position: relative;
 	}
 
-	.back-button {
-		padding: 0.75rem 1.5rem;
+	.header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 2rem;
+		width: 100%;
+	}
+
+	.title {
+		font-size: 2rem;
+		font-weight: 300;
+		font-style: italic;
+		color: white;
+		margin: 0;
+	}
+
+	.back-link {
+		padding: 0.5rem 1rem;
 		border-radius: 0.5rem;
 		border: 1px solid var(--color-accent);
 		background-color: transparent;
 		color: var(--color-accent);
-		cursor: pointer;
-		font-size: 1rem;
+		text-decoration: none;
+		font-size: 0.9rem;
 		transition: all 0.2s ease;
-		margin-bottom: 2rem;
+		white-space: nowrap;
 	}
 
-	.back-button:hover {
+	.back-link:hover {
 		background-color: var(--color-accent);
 		color: white;
-	}
-
-	.title {
-		font-size: 2.5rem;
-		font-weight: 300;
-		font-style: italic;
-		color: white;
-		margin: 0 0 2rem 0;
 	}
 
 	.about-text {

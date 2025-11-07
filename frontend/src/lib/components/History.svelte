@@ -1,5 +1,6 @@
 <script>
 	import Icon from './Icon.svelte';
+	import HistoryGroup from './HistoryGroup.svelte';
 	import grid from '$lib/assets/icons/grid.svg?raw';
 	import rows from '$lib/assets/icons/rows.svg?raw';
 	import close from '$lib/assets/icons/close.svg?raw';
@@ -8,18 +9,47 @@
 		history,
 		onLoadItem,
 		onDeleteItem,
+		onDeleteGroup,
 		onClearHistory,
-		viewMode = $bindable('grid')
+		viewMode = $bindable('grid'),
+		groupMode = $bindable('grouped')
 	} = $props();
 
 	function toggleView() {
 		viewMode = viewMode === 'grid' ? 'large' : 'grid';
 	}
 
+	function toggleGroupMode() {
+		groupMode = groupMode === 'grouped' ? 'standard' : 'grouped';
+	}
+
 	function handleDelete(event, item) {
 		event.stopPropagation(); // Prevent triggering the load action
 		onDeleteItem(item.id);
 	}
+
+	// Convert grouped data to flat list for standard view
+	function getFlatHistory(groupedHistory) {
+		const flat = [];
+		groupedHistory.forEach(group => {
+			group.variations.forEach(variation => {
+				flat.push({
+					id: variation.id,
+					timestamp: variation.timestamp,
+					inputImage: group.inputImage,
+					resultImage: variation.resultImage,
+					prompt: variation.prompt,
+					denoise: variation.denoise,
+					seed: variation.seed
+				});
+			});
+		});
+		return flat.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+	}
+
+	let displayHistory = $derived(
+		groupMode === 'standard' ? getFlatHistory(history) : history
+	);
 </script>
 
 {#if history.length > 0}
@@ -27,6 +57,9 @@
 		<div class="history-header">
 			<h2 class="history-title">History</h2>
 			<div class="history-controls">
+				<button class="history-toggle" onclick={toggleGroupMode} aria-label="Toggle grouped view">
+					{groupMode === 'grouped' ? 'Standard' : 'Grouped'}
+				</button>
 				<button class="history-toggle hide-on-mobile" onclick={toggleView} aria-label="Toggle history view">
 					<Icon src={viewMode === 'grid' ? rows : grid} size={20} />
 				</button>
@@ -34,36 +67,48 @@
 			</div>
 		</div>
 		<div class="history-grid" class:large-view={viewMode === 'large'}>
-			{#each history as item (item.id)}
-				<button
-					class="history-item"
-					onclick={() => onLoadItem(item)}
-					onkeydown={(e) => e.key === 'Enter' && onLoadItem(item)}
-					aria-label="Load history item: {item.prompt}"
-				>
-					<div
-						class="delete-button"
-						role="button"
-						tabindex="0"
-						onclick={(e) => handleDelete(e, item)}
-						onkeydown={(e) => e.key === 'Enter' && handleDelete(e, item)}
-						aria-label="Delete this history item"
+			{#if groupMode === 'grouped'}
+				{#each displayHistory as group (group.id)}
+					<HistoryGroup
+						{group}
+						{onLoadItem}
+						{onDeleteItem}
+						onDeleteGroup={onDeleteGroup}
+						isLargeView={viewMode === 'large'}
+					/>
+				{/each}
+			{:else}
+				{#each displayHistory as item (item.id)}
+					<button
+						class="history-item"
+						onclick={() => onLoadItem(item)}
+						onkeydown={(e) => e.key === 'Enter' && onLoadItem(item)}
+						aria-label="Load history item: {item.prompt}"
 					>
-						<Icon src={close} size={16} />
-					</div>
-					<div class="history-images">
-						<img src={item.inputImage} alt="Input" class="history-image history-input" />
-						<div class="history-arrow">→</div>
-						<img src={item.resultImage} alt="Result" class="history-image history-result" />
-					</div>
-					<div class="history-info">
-						<p class="history-prompt">{item.prompt}</p>
-						<p class="history-params">
-							<span>Familiarity: {item.denoise.toFixed(2)}</span>
-						</p>
-					</div>
-				</button>
-			{/each}
+						<div
+							class="delete-button"
+							role="button"
+							tabindex="0"
+							onclick={(e) => handleDelete(e, item)}
+							onkeydown={(e) => e.key === 'Enter' && handleDelete(e, item)}
+							aria-label="Delete this history item"
+						>
+							<Icon src={close} size={16} />
+						</div>
+						<div class="history-images">
+							<img src={item.inputImage} alt="Input" class="history-image history-input" />
+							<div class="history-arrow">→</div>
+							<img src={item.resultImage} alt="Result" class="history-image history-result" />
+						</div>
+						<div class="history-info">
+							<p class="history-prompt">{item.prompt}</p>
+							<p class="history-params">
+								<span>Familiarity: {item.denoise.toFixed(2)}</span>
+							</p>
+						</div>
+					</button>
+				{/each}
+			{/if}
 		</div>
 	</div>
 {/if}
@@ -96,8 +141,7 @@
 	}
 
 	.history-toggle {
-		width: 2.5rem;
-		height: 2.5rem;
+		padding: 0.5rem 1rem;
 		border-radius: 0.5rem;
 		border: 1px solid var(--color-accent);
 		background-color: transparent;
@@ -107,6 +151,8 @@
 		align-items: center;
 		justify-content: center;
 		transition: all 0.2s ease;
+		font-size: 0.9rem;
+		white-space: nowrap;
 	}
 
 	.history-toggle:hover {
@@ -185,7 +231,6 @@
 
 	.history-item:hover {
 		border-color: var(--color-accent);
-		transform: scale(1.02);
 		background-color: rgba(255, 107, 74, 0.1);
 	}
 
