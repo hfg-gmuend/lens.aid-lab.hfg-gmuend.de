@@ -6,12 +6,18 @@
 	let {
 		history,
 		onLoadItem,
+		onDeleteItem,
 		onClearHistory,
 		viewMode = $bindable('grid')
 	} = $props();
 
 	function toggleView() {
 		viewMode = viewMode === 'grid' ? 'large' : 'grid';
+	}
+
+	function handleDelete(event, item) {
+		event.stopPropagation(); // Prevent triggering the load action
+		onDeleteItem(item.id);
 	}
 </script>
 
@@ -20,7 +26,7 @@
 		<div class="history-header">
 			<h2 class="history-title">History</h2>
 			<div class="history-controls">
-				<button class="history-toggle" onclick={toggleView} aria-label="Toggle history view">
+				<button class="history-toggle hide-on-mobile" onclick={toggleView} aria-label="Toggle history view">
 					<Icon src={viewMode === 'grid' ? rows : grid} size={20} />
 				</button>
 				<button class="history-clear" onclick={onClearHistory}>Clear All</button>
@@ -34,6 +40,16 @@
 					onkeydown={(e) => e.key === 'Enter' && onLoadItem(item)}
 					aria-label="Load history item: {item.prompt}"
 				>
+					<div
+						class="delete-button"
+						role="button"
+						tabindex="0"
+						onclick={(e) => handleDelete(e, item)}
+						onkeydown={(e) => e.key === 'Enter' && handleDelete(e, item)}
+						aria-label="Delete this history item"
+					>
+						×
+					</div>
 					<div class="history-images">
 						<img src={item.inputImage} alt="Input" class="history-image history-input" />
 						<div class="history-arrow">→</div>
@@ -97,6 +113,10 @@
 		color: white;
 	}
 
+	.hide-on-mobile {
+		display: flex;
+	}
+
 	.history-clear {
 		padding: 0.5rem 1rem;
 		border-radius: 0.5rem;
@@ -132,11 +152,6 @@
 		gap: 1rem;
 	}
 
-	.history-grid.large-view .history-image {
-		/* width: 30%;
-		max-width: 300px; */
-	}
-
 	.history-grid.large-view .history-arrow {
 		font-size: 2rem;
 	}
@@ -164,12 +179,44 @@
 		width: 100%;
 		text-align: left;
 		padding: 0;
+		position: relative;
 	}
 
 	.history-item:hover {
 		border-color: var(--color-accent);
 		transform: scale(1.02);
 		background-color: rgba(255, 107, 74, 0.1);
+	}
+
+	.delete-button {
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
+		width: 2rem;
+		height: 2rem;
+		border-radius: 50%;
+		border: 1px solid rgba(255, 255, 255, 0.3);
+		background-color: rgba(0, 0, 0, 0.7);
+		color: white;
+		font-size: 1.5rem;
+		line-height: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		opacity: 0;
+		transition: opacity 0.2s ease, background-color 0.2s ease;
+		z-index: 10;
+		padding: 0;
+	}
+
+	.history-item:hover .delete-button {
+		opacity: 1;
+	}
+
+	.delete-button:hover {
+		background-color: rgba(255, 107, 74, 1);
+		border-color: rgba(255, 107, 74, 1);
 	}
 
 	.history-images {
@@ -182,7 +229,8 @@
 	}
 
 	.history-image {
-		width: 45%;
+		width: 40%;
+		flex-shrink: 0;
 		aspect-ratio: 1 / 1;
 		object-fit: cover;
 		border-radius: 0.5rem;
@@ -192,6 +240,7 @@
 		color: var(--color-accent);
 		font-size: 1.5rem;
 		font-weight: bold;
+		flex-shrink: 0;
 	}
 
 	.history-info {
@@ -219,8 +268,16 @@
 
 	/* Responsive layout for mobile */
 	@media (max-width: 600px) {
+		.hide-on-mobile {
+			display: none;
+		}
+
 		.history-grid {
 			grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+		}
+
+		.delete-button {
+			opacity: 1;
 		}
 	}
 </style>

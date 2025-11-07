@@ -282,6 +282,15 @@
 		}
 	}
 
+	function deleteHistoryItem(itemId) {
+		history = history.filter(item => item.id !== itemId);
+		try {
+			localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+		} catch (error) {
+			console.error('Failed to update history:', error);
+		}
+	}
+
 	onMount(() => {
 		if (canvasElement) {
 			context = canvasElement.getContext('2d', { willReadFrequently: true });
@@ -358,6 +367,7 @@
 		{history}
 		bind:viewMode={historyViewMode}
 		onLoadItem={loadFromHistory}
+		onDeleteItem={deleteHistoryItem}
 		onClearHistory={clearHistory}
 	/>
 </div>
