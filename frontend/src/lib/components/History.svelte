@@ -2,6 +2,7 @@
 	import Icon from './Icon.svelte';
 	import grid from '$lib/assets/icons/grid.svg?raw';
 	import rows from '$lib/assets/icons/rows.svg?raw';
+	import close from '$lib/assets/icons/close.svg?raw';
 
 	let {
 		history,
@@ -48,7 +49,7 @@
 						onkeydown={(e) => e.key === 'Enter' && handleDelete(e, item)}
 						aria-label="Delete this history item"
 					>
-						×
+						<Icon src={close} size={16} />
 					</div>
 					<div class="history-images">
 						<img src={item.inputImage} alt="Input" class="history-image history-input" />

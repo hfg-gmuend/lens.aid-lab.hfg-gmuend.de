@@ -306,7 +306,10 @@
 
 <div class="page-container">
 	<!-- Title -->
-	<h1 class="title">futures lens</h1>
+	<div class="header">
+		<h1 class="title">futures lens</h1>
+		<a href="/about" class="about-link">About</a>
+	</div>
 
 	<!-- Hidden video element for camera -->
 	<video
@@ -383,6 +386,15 @@
 		gap: 2rem;
 	}
 
+	.header {
+		width: 100%;
+		max-width: 1400px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 1rem;
+	}
+
 	.title {
 		font-size: 1.875rem;
 		font-weight: 300;
@@ -390,6 +402,24 @@
 		color: white;
 		margin: 0;
 		text-align: center;
+		flex: 1;
+	}
+
+	.about-link {
+		padding: 0.5rem 1rem;
+		border-radius: 0.5rem;
+		border: 1px solid var(--color-accent);
+		background-color: transparent;
+		color: var(--color-accent);
+		text-decoration: none;
+		font-size: 0.9rem;
+		transition: all 0.2s ease;
+		white-space: nowrap;
+	}
+
+	.about-link:hover {
+		background-color: var(--color-accent);
+		color: white;
 	}
 
 	.main-viewport {
