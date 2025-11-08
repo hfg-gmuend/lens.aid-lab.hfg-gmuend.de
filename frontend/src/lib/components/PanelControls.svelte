@@ -2,14 +2,17 @@
 	import Icon from './Icon.svelte';
 	import upload from '$lib/assets/icons/upload.svg?raw';
 	import camera from '$lib/assets/icons/camera.svg?raw';
+	import check from '$lib/assets/icons/check.svg?raw';
 	import download from '$lib/assets/icons/download.svg?raw';
 
 	let {
 		position = 'top-left', // 'top-left' or 'bottom-right'
 		cameraActive = false,
+		checkDisabled = false,
 		downloadDisabled = false,
 		onCamera = () => {},
 		onUpload = () => {},
+		onCheck = () => {},
 		onDownload = () => {}
 	} = $props();
 </script>
@@ -23,6 +26,9 @@
 			<Icon src={camera} size={28} />
 		</button>
 	{:else}
+		<button class="icon-button" onclick={onCheck} disabled={checkDisabled} aria-label="Check">
+			<Icon src={check} size={28} />
+		</button>
 		<button
 			class="icon-button"
 			onclick={onDownload}

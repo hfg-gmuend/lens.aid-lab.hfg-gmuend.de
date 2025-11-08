@@ -2,9 +2,9 @@
 	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
 	import { Stage, Layer, Image as KonvaImage, Group, Circle, Text, Arrow } from 'svelte-konva';
-	
+
 	const HISTORY_KEY = 'futures-lens-history';
-	
+
 	let history = $state([]);
 	let stageConfig = $state({
 		width: 800,
@@ -13,23 +13,23 @@
 	let nodes = $state([]);
 	let connectors = $state([]);
 	let stageRef = $state(null);
-	
+
 	// Pan and zoom state
 	let scale = $state(1);
 	let stageX = $state(0);
 	let stageY = $state(0);
-	
+
 	const SCALE_BY = 1.01;
 	const MIN_SCALE = 0.2;
 	const MAX_SCALE = 3;
-	
+
 	const INPUT_NODE_SIZE = 120;
 	const VARIATION_NODE_SIZE = 100;
 	const SPACING_X = 400;
 	const SPACING_Y = 300;
 	const VARIATION_OFFSET = 200;
 	const VARIATION_SPACING_Y = 120;
-	
+
 	function loadHistoryFromStorage() {
 		try {
 			const stored = localStorage.getItem(HISTORY_KEY);
@@ -42,28 +42,28 @@
 			history = [];
 		}
 	}
-	
+
 	async function loadImages() {
 		const loadedNodes = [];
 		const loadedConnectors = [];
-		
+
 		for (let groupIndex = 0; groupIndex < history.length; groupIndex++) {
 			const group = history[groupIndex];
 			const row = Math.floor(groupIndex / 3);
 			const col = groupIndex % 3;
-			
+
 			// Load input image
 			const inputImg = new Image();
 			inputImg.crossOrigin = 'anonymous';
 			inputImg.src = group.inputImage;
-			
+
 			await new Promise((resolve) => {
 				inputImg.onload = resolve;
 				inputImg.onerror = resolve;
 			});
-			
+
 			const inputId = `input-${group.id}`;
-			
+
 			// Add input node
 			loadedNodes.push({
 				id: inputId,
@@ -77,26 +77,26 @@
 				component: null,
 				points: null
 			});
-			
+
 			// Load variation images
 			for (let varIndex = 0; varIndex < group.variations.length; varIndex++) {
 				const variation = group.variations[varIndex];
 				const varImg = new Image();
 				varImg.crossOrigin = 'anonymous';
 				varImg.src = variation.resultImage;
-				
+
 				await new Promise((resolve) => {
 					varImg.onload = resolve;
 					varImg.onerror = resolve;
 				});
-				
+
 				const variationId = `variation-${variation.id}`;
-				
+
 				loadedNodes.push({
 					id: variationId,
 					image: varImg,
 					x: col * SPACING_X + 50 + VARIATION_OFFSET,
-					y: row * SPACING_Y + 50 + (varIndex * VARIATION_SPACING_Y),
+					y: row * SPACING_Y + 50 + varIndex * VARIATION_SPACING_Y,
 					width: VARIATION_NODE_SIZE,
 					height: VARIATION_NODE_SIZE,
 					type: 'variation',
@@ -105,7 +105,7 @@
 					component: null,
 					points: null
 				});
-				
+
 				// Create connector from input to variation
 				loadedConnectors.push({
 					id: `connector-${group.id}-${variation.id}`,
@@ -116,22 +116,22 @@
 				});
 			}
 		}
-		
+
 		nodes = loadedNodes;
 		connectors = loadedConnectors;
-		
+
 		// Calculate required canvas size
 		if (loadedNodes.length > 0) {
-			const maxX = Math.max(...loadedNodes.map(n => n.x + n.width));
-			const maxY = Math.max(...loadedNodes.map(n => n.y + n.height));
+			const maxX = Math.max(...loadedNodes.map((n) => n.x + n.width));
+			const maxY = Math.max(...loadedNodes.map((n) => n.y + n.height));
 			stageConfig.width = Math.max(800, maxX + 100);
 			stageConfig.height = Math.max(600, maxY + 100);
 		}
-		
+
 		// Initial connector points calculation
 		updateConnectors();
 	}
-	
+
 	let dragItemId = $state(null);
 
 	function getConnectorPoints(from, to) {
@@ -192,42 +192,42 @@
 
 	function handleWheel(e) {
 		e.evt.preventDefault();
-		
+
 		if (!stageRef) return;
 		const stage = stageRef.node;
 		if (!stage) return;
-		
+
 		const oldScale = scale;
 		const pointer = stage.getPointerPosition();
-		
+
 		const mousePointTo = {
 			x: (pointer.x - stage.x()) / oldScale,
 			y: (pointer.y - stage.y()) / oldScale
 		};
-		
+
 		// how to scale? Zoom in? Or zoom out?
 		let direction = e.evt.deltaY > 0 ? 1 : -1;
-		
+
 		// when we zoom on trackpad, e.evt.ctrlKey is true
 		// in that case lets revert direction
 		if (e.evt.ctrlKey) {
 			direction = -direction;
 		}
-		
+
 		const newScale = direction > 0 ? oldScale * SCALE_BY : oldScale / SCALE_BY;
-		
+
 		// Clamp scale
 		scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
-		
+
 		const newPos = {
 			x: pointer.x - mousePointTo.x * scale,
 			y: pointer.y - mousePointTo.y * scale
 		};
-		
+
 		stageX = newPos.x;
 		stageY = newPos.y;
 	}
-	
+
 	function handleStageDragEnd(e) {
 		stageX = e.target.x();
 		stageY = e.target.y();
@@ -248,7 +248,7 @@
 		stageX = 0;
 		stageY = 0;
 	}
-	
+
 	onMount(() => {
 		loadHistoryFromStorage();
 	});
@@ -259,7 +259,7 @@
 		<h1 class="title">Canvas</h1>
 		<a href="{base}/" class="back-link">← Back to App</a>
 	</div>
-	
+
 	<div class="canvas-container">
 		{#if nodes.length > 0}
 			<!-- Zoom controls -->
@@ -309,8 +309,6 @@
 							ondragmove={handleDragMove}
 							ondragend={handleDragEnd}
 						>
-					
-							
 							<!-- Main image -->
 							<KonvaImage
 								image={node.image}
@@ -321,7 +319,7 @@
 								shadowBlur={10}
 								shadowOpacity={0.3}
 							/>
-							
+
 							<!-- Border -->
 							<KonvaImage
 								image={node.image}
@@ -332,7 +330,7 @@
 								strokeWidth={3}
 								listening={false}
 							/>
-							
+
 							<!-- Count badge for input nodes -->
 							{#if node.type === 'input' && node.variationCount > 1}
 								<Circle
@@ -343,7 +341,7 @@
 									stroke="white"
 									strokeWidth={2}
 								/>
-								
+
 								<Text
 									x={node.width - 15}
 									y={15}
@@ -357,7 +355,7 @@
 									align="center"
 								/>
 							{/if}
-							
+
 							<!-- Prompt and denoise for variation nodes -->
 							{#if node.type === 'variation'}
 								<!-- Prompt text -->
