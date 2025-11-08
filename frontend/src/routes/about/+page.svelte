@@ -1,10 +1,11 @@
 <script>
+	import { base } from '$app/paths';
 </script>
 
 <div class="about-container">
 	<div class="header">
 		<h1 class="title">About Futures Lens</h1>
-		<a href="/" class="back-link">← Back to App</a>
+		<a href="{base}/" class="back-link">← Back to App</a>
 	</div>
 	
 	<div class="about-content">

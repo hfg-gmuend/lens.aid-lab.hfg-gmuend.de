@@ -1,5 +1,6 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
+	import { base } from '$app/paths';
 	import SplitScreenDivider from '$lib/components/SplitScreenDivider.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import ControlBar from '$lib/components/ControlBar.svelte';
@@ -449,8 +450,8 @@
 	<div class="header">
 		<h1 class="title">futures lens</h1>
 		<div class="header-links">
-			<a href="/canvas" class="about-link">Canvas</a>
-			<a href="/about" class="about-link">About</a>
+			<a href="{base}/canvas" class="about-link">Canvas</a>
+			<a href="{base}/about" class="about-link">About</a>
 		</div>
 	</div>
 

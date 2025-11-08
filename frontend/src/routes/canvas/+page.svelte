@@ -1,5 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
 	import { Stage, Layer, Image as KonvaImage, Group, Circle, Text, Arrow } from 'svelte-konva';
 	
 	const HISTORY_KEY = 'futures-lens-history';
@@ -256,7 +257,7 @@
 <div class="visualization-page">
 	<div class="header">
 		<h1 class="title">Canvas</h1>
-		<a href="/" class="back-link">← Back to App</a>
+		<a href="{base}/" class="back-link">← Back to App</a>
 	</div>
 	
 	<div class="canvas-container">
@@ -380,7 +381,7 @@
 		{:else}
 			<div class="empty-state">
 				<p>No history data available</p>
-				<a href="/" class="link">Go back and create some images</a>
+				<a href="{base}/" class="link">Go back and create some images</a>
 			</div>
 		{/if}
 	</div>
