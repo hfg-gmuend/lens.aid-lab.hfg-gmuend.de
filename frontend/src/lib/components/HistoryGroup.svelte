@@ -4,13 +4,7 @@
 	import chevronDown from '$lib/assets/icons/chevron-down.svg?raw';
 	import chevronUp from '$lib/assets/icons/chevron-up.svg?raw';
 
-	let {
-		group,
-		onLoadItem,
-		onDeleteItem,
-		onDeleteGroup,
-		isLargeView = false
-	} = $props();
+	let { group, onLoadItem, onDeleteItem, onDeleteGroup, isLargeView = false } = $props();
 
 	let expanded = $state(false);
 	let selectedVariation = $state(group.variations[0]);
@@ -104,15 +98,8 @@
 			{:else}
 				<!-- Collapsed: Show selected/first variation -->
 				<div class="selected-variation">
-					<button
-						class="variation-button"
-						onclick={() => handleVariationClick(selectedVariation)}
-					>
-						<img
-							src={selectedVariation.resultImage}
-							alt="Result"
-							class="variation-image"
-						/>
+					<button class="variation-button" onclick={() => handleVariationClick(selectedVariation)}>
+						<img src={selectedVariation.resultImage} alt="Result" class="variation-image" />
 					</button>
 					<div class="variation-info">
 						<p class="variation-prompt">{selectedVariation.prompt}</p>
@@ -124,7 +111,11 @@
 
 		<!-- Expand/Collapse Button -->
 		{#if group.variations.length > 1}
-			<button class="expand-button" onclick={toggleExpanded} aria-label={expanded ? 'Collapse variations' : 'Expand variations'}>
+			<button
+				class="expand-button"
+				onclick={toggleExpanded}
+				aria-label={expanded ? 'Collapse variations' : 'Expand variations'}
+			>
 				<Icon src={expanded ? chevronUp : chevronDown} size={20} />
 			</button>
 		{/if}
@@ -161,7 +152,9 @@
 		justify-content: center;
 		cursor: pointer;
 		opacity: 0;
-		transition: opacity 0.2s ease, background-color 0.2s ease;
+		transition:
+			opacity 0.2s ease,
+			background-color 0.2s ease;
 		z-index: 20;
 	}
 
@@ -360,7 +353,9 @@
 		justify-content: center;
 		cursor: pointer;
 		opacity: 0;
-		transition: opacity 0.2s ease, background-color 0.2s ease;
+		transition:
+			opacity 0.2s ease,
+			background-color 0.2s ease;
 		z-index: 10;
 	}
 

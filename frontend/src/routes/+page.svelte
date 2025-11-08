@@ -31,13 +31,12 @@
 	let historyGroupMode = $state('grouped'); // 'grouped' or 'standard'
 	let currentInputHash = $state(null); // Track hash of current canvas content
 
-
 	const CANVAS_SIZE = 1024;
 
 	// Generate a hash from canvas image data to identify unique inputs
 	async function generateInputImageHash() {
 		if (!canvasElement) return null;
-		
+
 		try {
 			// Get image data from a smaller sample to create hash
 			const tempCanvas = document.createElement('canvas');
@@ -45,19 +44,19 @@
 			tempCanvas.height = 32;
 			const tempContext = tempCanvas.getContext('2d');
 			tempContext.drawImage(canvasElement, 0, 0, 32, 32);
-			
+
 			// Get pixel data
 			const imageData = tempContext.getImageData(0, 0, 32, 32);
 			const data = imageData.data;
-			
+
 			// Create simple hash from pixel data
 			let hash = 0;
 			for (let i = 0; i < data.length; i += 4) {
 				// Sample every 4th pixel to speed up
-				hash = ((hash << 5) - hash) + data[i] + data[i+1] + data[i+2];
+				hash = (hash << 5) - hash + data[i] + data[i + 1] + data[i + 2];
 				hash = hash & hash; // Convert to 32bit integer
 			}
-			
+
 			return hash.toString(36);
 		} catch (error) {
 			console.error('Failed to generate image hash:', error);
@@ -264,7 +263,14 @@
 	}
 
 	// History management
-	async function saveToHistory(inputHash, inputImageUrl, resultImageUrl, prompt, denoiseVal, seedVal) {
+	async function saveToHistory(
+		inputHash,
+		inputImageUrl,
+		resultImageUrl,
+		prompt,
+		denoiseVal,
+		seedVal
+	) {
 		const variation = {
 			id: Date.now(),
 			timestamp: new Date().toISOString(),
@@ -275,11 +281,14 @@
 		};
 
 		// Check if we already have a group with this input hash
-		const existingGroupIndex = history.findIndex(group => group.inputHash === inputHash);
+		const existingGroupIndex = history.findIndex((group) => group.inputHash === inputHash);
 
 		if (existingGroupIndex !== -1) {
 			// Add to existing group, but update the inputImage URL to the latest one
-			history[existingGroupIndex].variations = [variation, ...history[existingGroupIndex].variations];
+			history[existingGroupIndex].variations = [
+				variation,
+				...history[existingGroupIndex].variations
+			];
 			history[existingGroupIndex].timestamp = new Date().toISOString(); // Update group timestamp
 			history[existingGroupIndex].inputImage = inputImageUrl; // Update to latest URL
 		} else {
@@ -351,11 +360,11 @@
 	// Migrate old history format to new grouped format
 	function migrateHistoryFormat(data) {
 		if (!data || data.length === 0) return [];
-		
+
 		// Check if data is already in new format
 		if (data[0].variations) {
 			// Ensure all groups have an inputHash (for data saved before hash implementation)
-			return data.map(group => {
+			return data.map((group) => {
 				if (!group.inputHash) {
 					// Use inputImage URL as fallback hash for old grouped data
 					group.inputHash = 'legacy_' + btoa(group.inputImage).substring(0, 16);
@@ -367,11 +376,11 @@
 		// Convert old format to new format
 		// Group by inputImage URL since we don't have hash for old data
 		const groups = {};
-		
-		data.forEach(item => {
+
+		data.forEach((item) => {
 			const inputImage = item.inputImage;
 			const fallbackHash = 'legacy_' + btoa(inputImage).substring(0, 16);
-			
+
 			if (!groups[fallbackHash]) {
 				groups[fallbackHash] = {
 					id: item.id,
@@ -405,16 +414,18 @@
 	}
 
 	function deleteHistoryItem(itemId) {
-		history = history.map(group => {
-			// Remove variation from group
-			const updatedVariations = group.variations.filter(v => v.id !== itemId);
-			
-			// If group has no variations left, it will be filtered out below
-			return {
-				...group,
-				variations: updatedVariations
-			};
-		}).filter(group => group.variations.length > 0); // Remove empty groups
+		history = history
+			.map((group) => {
+				// Remove variation from group
+				const updatedVariations = group.variations.filter((v) => v.id !== itemId);
+
+				// If group has no variations left, it will be filtered out below
+				return {
+					...group,
+					variations: updatedVariations
+				};
+			})
+			.filter((group) => group.variations.length > 0); // Remove empty groups
 
 		try {
 			localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
@@ -424,7 +435,7 @@
 	}
 
 	function deleteHistoryGroup(groupId) {
-		history = history.filter(group => group.id !== groupId);
+		history = history.filter((group) => group.id !== groupId);
 		try {
 			localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
 		} catch (error) {
@@ -497,7 +508,9 @@
 
 			<PanelControls
 				position="bottom-right"
+				checkDisabled={!resultImage}
 				downloadDisabled={!resultImage}
+				onCheck={handleReuse}
 				onDownload={handleDownload}
 			/>
 		</div>

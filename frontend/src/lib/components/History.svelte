@@ -31,8 +31,8 @@
 	// Convert grouped data to flat list for standard view
 	function getFlatHistory(groupedHistory) {
 		const flat = [];
-		groupedHistory.forEach(group => {
-			group.variations.forEach(variation => {
+		groupedHistory.forEach((group) => {
+			group.variations.forEach((variation) => {
 				flat.push({
 					id: variation.id,
 					timestamp: variation.timestamp,
@@ -47,9 +47,7 @@
 		return flat.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 	}
 
-	let displayHistory = $derived(
-		groupMode === 'standard' ? getFlatHistory(history) : history
-	);
+	let displayHistory = $derived(groupMode === 'standard' ? getFlatHistory(history) : history);
 </script>
 
 {#if history.length > 0}
@@ -60,7 +58,11 @@
 				<button class="history-toggle" onclick={toggleGroupMode} aria-label="Toggle grouped view">
 					{groupMode === 'grouped' ? 'Standard' : 'Grouped'}
 				</button>
-				<button class="history-toggle hide-on-mobile" onclick={toggleView} aria-label="Toggle history view">
+				<button
+					class="history-toggle hide-on-mobile"
+					onclick={toggleView}
+					aria-label="Toggle history view"
+				>
 					<Icon src={viewMode === 'grid' ? rows : grid} size={20} />
 				</button>
 				<button class="history-clear" onclick={onClearHistory}>Clear All</button>
@@ -73,7 +75,7 @@
 						{group}
 						{onLoadItem}
 						{onDeleteItem}
-						onDeleteGroup={onDeleteGroup}
+						{onDeleteGroup}
 						isLargeView={viewMode === 'large'}
 					/>
 				{/each}
@@ -251,7 +253,9 @@
 		justify-content: center;
 		cursor: pointer;
 		opacity: 0;
-		transition: opacity 0.2s ease, background-color 0.2s ease;
+		transition:
+			opacity 0.2s ease,
+			background-color 0.2s ease;
 		z-index: 10;
 		padding: 0;
 	}

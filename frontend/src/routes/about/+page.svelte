@@ -7,26 +7,41 @@
 		<h1 class="title">About Futures Lens</h1>
 		<a href="{base}/" class="back-link">← Back to App</a>
 	</div>
-	
+
 	<div class="about-content">
 		<div class="about-text">
 			<p>
-				Futures Lens is an interactive tool for exploring and generating future scenarios through AI-powered image transformation.
+				Futures Lens is an interactive tool for exploring and generating future scenarios through
+				AI-powered image transformation.
 			</p>
-			
+
 			<p>
-				Capture or upload an image, provide a prompt describing a potential future, and watch as the AI transforms your vision into a visual representation of what might be.
+				Capture or upload an image, provide a prompt describing a potential future, and watch as the
+				AI transforms your vision into a visual representation of what might be.
 			</p>
-			
+
 			<h2>How to Use</h2>
 			<ol>
-				<li><strong>Capture or Upload:</strong> Use your camera to capture the present moment or upload an existing image.</li>
-				<li><strong>Describe the Future:</strong> Enter a prompt describing how you envision the future transformation.</li>
-				<li><strong>Adjust Familiarity:</strong> Use the familiarity slider to control how closely the result resembles the input.</li>
-				<li><strong>Transfer:</strong> Click the transfer button to generate your future vision.</li>
-				<li><strong>Reuse:</strong> Click the top handle to reuse the result as a new starting point.</li>
+				<li>
+					<strong>Capture or Upload:</strong> Use your camera to capture the present moment or upload
+					an existing image.
+				</li>
+				<li>
+					<strong>Describe the Future:</strong> Enter a prompt describing how you envision the future
+					transformation.
+				</li>
+				<li>
+					<strong>Adjust Familiarity:</strong> Use the familiarity slider to control how closely the
+					result resembles the input.
+				</li>
+				<li>
+					<strong>Transfer:</strong> Click the transfer button to generate your future vision.
+				</li>
+				<li>
+					<strong>Reuse:</strong> Click the top handle to reuse the result as a new starting point.
+				</li>
 			</ol>
-			
+
 			<h2>Tips</h2>
 			<ul>
 				<li>Be specific and descriptive in your prompts for better results.</li>

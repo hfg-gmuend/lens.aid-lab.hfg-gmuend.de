@@ -3,12 +3,7 @@
 </script>
 
 <div class="control-bar">
-	<input
-		type="text"
-		bind:value={promptValue}
-		placeholder="Your prompt here"
-		class="prompt-input"
-	/>
+	<input type="text" bind:value={promptValue} placeholder="Your prompt here" class="prompt-input" />
 
 	<div class="slider-container">
 		<label for="denoise-slider" class="slider-label">Familiar</label>
