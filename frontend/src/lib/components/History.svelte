@@ -5,12 +5,12 @@
 	import rows from '$lib/assets/icons/rows.svg?raw';
 	import close from '$lib/assets/icons/close.svg?raw';
 	import download from '$lib/assets/icons/download.svg?raw';
+	import { historyDB } from '$lib/db/historyDB.js';
 	import { exportHistoryAsJSON, formatBytes, calculateHistorySize } from '$lib/utils/export.js';
 	import { notifySuccess, notifyError } from '$lib/stores/notifications.js';
 	import { lazyload } from '$lib/utils/lazyload.js';
 
 	let {
-		history,
 		onLoadItem,
 		onDeleteItem,
 		onDeleteGroup,
@@ -32,11 +32,23 @@
 		onDeleteItem(item.id);
 	}
 
-	function handleExport() {
+	async function handleExport() {
 		try {
-			exportHistoryAsJSON(history);
-			const size = formatBytes(calculateHistorySize(history));
-			notifySuccess(`History exported (${size})`);
+			const data = await historyDB.export();
+			if (!data) {
+				notifyError('No history to export');
+				return;
+			}
+
+			const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = `futures-lens-history-${new Date().toISOString().split('T')[0]}.json`;
+			link.click();
+			URL.revokeObjectURL(url);
+
+			notifySuccess(`History exported (${data.totalVariations} items)`);
 		} catch (error) {
 			console.error('Failed to export history:', error);
 			notifyError('Failed to export history');
@@ -44,7 +56,7 @@
 	}
 
 	// Convert grouped data to flat list for standard view
-	function getFlatHistory(groupedHistory) {
+	function getFlatHistory(groupedHistory = []) {
 		const flat = [];
 		groupedHistory.forEach((group) => {
 			group.variations.forEach((variation) => {
@@ -62,10 +74,10 @@
 		return flat.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 	}
 
-	let displayHistory = $derived(groupMode === 'standard' ? getFlatHistory(history) : history);
+	let displayHistory = $derived(groupMode === 'standard' ? getFlatHistory($historyDB) : $historyDB);
 </script>
 
-{#if history.length > 0}
+{#if $historyDB.length > 0}
 	<div class="history-section">
 		<div class="history-header">
 			<h2 class="history-title">History</h2>

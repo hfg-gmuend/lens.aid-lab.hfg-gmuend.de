@@ -14,6 +14,8 @@
 	import { notifySuccess, notifyError, notifyWarning, notifyInfo } from '$lib/stores/notifications.js';
 	import { promptHistory } from '$lib/stores/prompts.js';
 	import { settings } from '$lib/stores/settings.js';
+	import { historyDB } from '$lib/db/historyDB.js';
+	import { storageMonitor } from '$lib/stores/storageMonitor.js';
 	import { validatePrompt, sanitizePrompt } from '$lib/utils/validation.js';
 	import { validateImage, compressImage } from '$lib/utils/imageUtils.js';
 	import { uploadImage, checkConnectivity } from '$lib/api/client.js';
@@ -23,8 +25,6 @@
 
 	const API_URL = 'https://api-h34hnr2j2nm2me2d.transferscope.org/';
 	const CLIENT_ID = 'web';
-	const HISTORY_KEY = 'futures-lens-history';
-	const MAX_HISTORY = 20;
 
 	let promptValue = $state('');
 	let denoise = $state($settings.denoise); // 0.4-1.0 range, loaded from settings
@@ -45,7 +45,6 @@
 	let cameraActive = $state(false);
 	let loading = $state(false);
 	let loopFrame = $state(null);
-	let history = $state([]);
 	let historyViewMode = $state($settings.historyViewMode); // 'grid' or 'large'
 	let historyGroupMode = $state($settings.historyGroupMode); // 'grouped' or 'standard'
 	let currentInputHash = $state(null); // Track hash of current canvas content
@@ -304,7 +303,7 @@
 			inputImageUrl = inputUrl;
 
 			// Save to history with actual values from API and our input hash
-			await saveToHistory(inputHash, inputUrl, outputUrl, data.prompt, data.denoise, data.seed);
+			await historyDB.add(inputHash, inputUrl, outputUrl, data.prompt, data.denoise, data.seed);
 
 			// Add to prompt history
 			promptHistory.add(cleanPrompt);
@@ -375,57 +374,7 @@
 		showComparison = true;
 	}
 
-	// History management
-	async function saveToHistory(
-		inputHash,
-		inputImageUrl,
-		resultImageUrl,
-		prompt,
-		denoiseVal,
-		seedVal
-	) {
-		const variation = {
-			id: Date.now(),
-			timestamp: new Date().toISOString(),
-			resultImage: resultImageUrl,
-			prompt,
-			denoise: denoiseVal,
-			seed: seedVal
-		};
-
-		// Check if we already have a group with this input hash
-		const existingGroupIndex = history.findIndex((group) => group.inputHash === inputHash);
-
-		if (existingGroupIndex !== -1) {
-			// Add to existing group, but update the inputImage URL to the latest one
-			history[existingGroupIndex].variations = [
-				variation,
-				...history[existingGroupIndex].variations
-			];
-			history[existingGroupIndex].timestamp = new Date().toISOString(); // Update group timestamp
-			history[existingGroupIndex].inputImage = inputImageUrl; // Update to latest URL
-		} else {
-			// Create new group
-			const newGroup = {
-				id: Date.now(),
-				timestamp: new Date().toISOString(),
-				inputHash: inputHash,
-				inputImage: inputImageUrl,
-				variations: [variation]
-			};
-			history = [newGroup, ...history];
-		}
-
-		// Limit total groups
-		history = history.slice(0, MAX_HISTORY);
-
-		// Save to localStorage
-		try {
-			localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-		} catch (error) {
-			console.error('Failed to save history to localStorage:', error);
-		}
-	}
+	// History management - now handled by historyDB store
 
 	function loadFromHistory(item) {
 		if (!context) return;
@@ -456,111 +405,29 @@
 		seed = item.seed;
 	}
 
-	function loadHistoryFromStorage() {
-		try {
-			const stored = localStorage.getItem(HISTORY_KEY);
-			if (stored) {
-				const parsed = JSON.parse(stored);
-				// Migrate old format to new format if needed
-				history = migrateHistoryFormat(parsed);
-			}
-		} catch (error) {
-			console.error('Failed to load history from localStorage:', error);
-			history = [];
-		}
+	// History deletion handlers
+	async function deleteHistoryItem(itemId) {
+		await historyDB.removeVariation(itemId);
 	}
 
-	// Migrate old history format to new grouped format
-	function migrateHistoryFormat(data) {
-		if (!data || data.length === 0) return [];
-
-		// Check if data is already in new format
-		if (data[0].variations) {
-			// Ensure all groups have an inputHash (for data saved before hash implementation)
-			return data.map((group) => {
-				if (!group.inputHash) {
-					// Use inputImage URL as fallback hash for old grouped data
-					group.inputHash = 'legacy_' + btoa(group.inputImage).substring(0, 16);
-				}
-				return group;
-			});
-		}
-
-		// Convert old format to new format
-		// Group by inputImage URL since we don't have hash for old data
-		const groups = {};
-
-		data.forEach((item) => {
-			const inputImage = item.inputImage;
-			const fallbackHash = 'legacy_' + btoa(inputImage).substring(0, 16);
-
-			if (!groups[fallbackHash]) {
-				groups[fallbackHash] = {
-					id: item.id,
-					timestamp: item.timestamp,
-					inputHash: fallbackHash,
-					inputImage: inputImage,
-					variations: []
-				};
-			}
-
-			groups[fallbackHash].variations.push({
-				id: item.id,
-				timestamp: item.timestamp,
-				resultImage: item.resultImage,
-				prompt: item.prompt,
-				denoise: item.denoise,
-				seed: item.seed
-			});
-		});
-
-		return Object.values(groups);
+	async function deleteHistoryGroup(inputHash) {
+		await historyDB.removeGroup(inputHash);
 	}
 
-	function clearHistory() {
-		history = [];
-		try {
-			localStorage.removeItem(HISTORY_KEY);
-		} catch (error) {
-			console.error('Failed to clear history:', error);
-		}
+	async function clearHistory() {
+		await historyDB.clear();
 	}
 
-	function deleteHistoryItem(itemId) {
-		history = history
-			.map((group) => {
-				// Remove variation from group
-				const updatedVariations = group.variations.filter((v) => v.id !== itemId);
-
-				// If group has no variations left, it will be filtered out below
-				return {
-					...group,
-					variations: updatedVariations
-				};
-			})
-			.filter((group) => group.variations.length > 0); // Remove empty groups
-
-		try {
-			localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-		} catch (error) {
-			console.error('Failed to update history:', error);
-		}
-	}
-
-	function deleteHistoryGroup(groupId) {
-		history = history.filter((group) => group.id !== groupId);
-		try {
-			localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-		} catch (error) {
-			console.error('Failed to update history:', error);
-		}
-	}
-
-	onMount(() => {
+	onMount(async () => {
 		if (canvasElement) {
 			context = canvasElement.getContext('2d', { willReadFrequently: true });
 		}
-		loadHistoryFromStorage();
+
+		// Initialize IndexedDB history store
+		await historyDB.init();
+
+		// Start storage monitoring
+		storageMonitor.start();
 
 		// Setup network monitoring
 		const cleanupNetwork = initNetworkMonitor();
@@ -584,6 +451,7 @@
 			cleanupNetwork();
 			cleanupKeyboard();
 			clearAllShortcuts();
+			storageMonitor.stop();
 		};
 	});
 
@@ -689,7 +557,6 @@
 
 	<!-- History Section -->
 	<History
-		{history}
 		bind:viewMode={historyViewMode}
 		bind:groupMode={historyGroupMode}
 		onLoadItem={loadFromHistory}
