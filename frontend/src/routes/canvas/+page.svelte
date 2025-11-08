@@ -7,21 +7,28 @@
 
 	let history = $state([]);
 	let stageConfig = $state({
-		width: 800,
-		height: 600
+		width: window.innerWidth,
+		height: window.innerHeight
 	});
 	let nodes = $state([]);
 	let connectors = $state([]);
 	let stageRef = $state(null);
+
+	// Tool state: 'cursor' or 'hand'
+	let activeTool = $state('cursor');
 
 	// Pan and zoom state
 	let scale = $state(1);
 	let stageX = $state(0);
 	let stageY = $state(0);
 
-	const SCALE_BY = 1.01;
-	const MIN_SCALE = 0.2;
-	const MAX_SCALE = 3;
+	// Pan state for hand tool
+	let isPanning = $state(false);
+	let lastPointerPosition = $state(null);
+
+	const SCALE_BY = 1.05;
+	const MIN_SCALE = 0.1;
+	const MAX_SCALE = 5;
 
 	const INPUT_NODE_SIZE = 120;
 	const VARIATION_NODE_SIZE = 100;
@@ -120,14 +127,6 @@
 		nodes = loadedNodes;
 		connectors = loadedConnectors;
 
-		// Calculate required canvas size
-		if (loadedNodes.length > 0) {
-			const maxX = Math.max(...loadedNodes.map((n) => n.x + n.width));
-			const maxY = Math.max(...loadedNodes.map((n) => n.y + n.height));
-			stageConfig.width = Math.max(800, maxX + 100);
-			stageConfig.height = Math.max(600, maxY + 100);
-		}
-
 		// Initial connector points calculation
 		updateConnectors();
 	}
@@ -169,6 +168,7 @@
 	}
 
 	function handleDragStart(e) {
+		if (activeTool !== 'cursor') return;
 		dragItemId = e.target.id();
 		const item = nodes.find((i) => i.id === dragItemId);
 		if (item?.component) {
@@ -177,6 +177,7 @@
 	}
 
 	function handleDragMove(e) {
+		if (activeTool !== 'cursor') return;
 		const nodeId = e.target.id();
 		const node = nodes.find((n) => n.id === nodeId);
 		if (node) {
@@ -190,6 +191,40 @@
 		dragItemId = null;
 	}
 
+	function handleMouseDown(e) {
+		if (activeTool === 'hand') {
+			isPanning = true;
+			if (!stageRef) return;
+			const stage = stageRef.node;
+			if (!stage) return;
+			lastPointerPosition = stage.getPointerPosition();
+		}
+	}
+
+	function handleMouseMove(e) {
+		if (activeTool === 'hand' && isPanning) {
+			if (!stageRef || !lastPointerPosition) return;
+			const stage = stageRef.node;
+			if (!stage) return;
+
+			const pointer = stage.getPointerPosition();
+			const dx = pointer.x - lastPointerPosition.x;
+			const dy = pointer.y - lastPointerPosition.y;
+
+			stageX += dx;
+			stageY += dy;
+
+			lastPointerPosition = pointer;
+		}
+	}
+
+	function handleMouseUp(e) {
+		if (activeTool === 'hand') {
+			isPanning = false;
+			lastPointerPosition = null;
+		}
+	}
+
 	function handleWheel(e) {
 		e.evt.preventDefault();
 
@@ -197,40 +232,47 @@
 		const stage = stageRef.node;
 		if (!stage) return;
 
-		const oldScale = scale;
-		const pointer = stage.getPointerPosition();
-
-		const mousePointTo = {
-			x: (pointer.x - stage.x()) / oldScale,
-			y: (pointer.y - stage.y()) / oldScale
-		};
-
-		// how to scale? Zoom in? Or zoom out?
-		let direction = e.evt.deltaY > 0 ? 1 : -1;
-
-		// when we zoom on trackpad, e.evt.ctrlKey is true
-		// in that case lets revert direction
+		// Check if this is a pinch-to-zoom gesture (ctrlKey is set for pinch gestures)
 		if (e.evt.ctrlKey) {
-			direction = -direction;
+			// Zoom behavior
+			const oldScale = scale;
+			const pointer = stage.getPointerPosition();
+
+			const mousePointTo = {
+				x: (pointer.x - stageX) / oldScale,
+				y: (pointer.y - stageY) / oldScale
+			};
+
+			let direction = e.evt.deltaY > 0 ? -1 : 1;
+			const newScale = direction > 0 ? oldScale * SCALE_BY : oldScale / SCALE_BY;
+
+			// Clamp scale
+			scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+
+			const newPos = {
+				x: pointer.x - mousePointTo.x * scale,
+				y: pointer.y - mousePointTo.y * scale
+			};
+
+			stageX = newPos.x;
+			stageY = newPos.y;
+		} else {
+			// Pan behavior (two-finger scroll on trackpad)
+			stageX -= e.evt.deltaX;
+			stageY -= e.evt.deltaY;
 		}
-
-		const newScale = direction > 0 ? oldScale * SCALE_BY : oldScale / SCALE_BY;
-
-		// Clamp scale
-		scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
-
-		const newPos = {
-			x: pointer.x - mousePointTo.x * scale,
-			y: pointer.y - mousePointTo.y * scale
-		};
-
-		stageX = newPos.x;
-		stageY = newPos.y;
 	}
 
 	function handleStageDragEnd(e) {
-		stageX = e.target.x();
-		stageY = e.target.y();
+		if (activeTool === 'hand') {
+			stageX = e.target.x();
+			stageY = e.target.y();
+		}
+	}
+
+	function handleResize() {
+		stageConfig.width = window.innerWidth;
+		stageConfig.height = window.innerHeight;
 	}
 
 	function zoomIn() {
@@ -251,64 +293,70 @@
 
 	onMount(() => {
 		loadHistoryFromStorage();
+		window.addEventListener('resize', handleResize);
+
+		return () => {
+			window.removeEventListener('resize', handleResize);
+		};
 	});
 </script>
 
-<div class="visualization-page">
-	<div class="header">
-		<h1 class="title">Canvas</h1>
+<div class="canvas-page">
+	<!-- Top Navigation -->
+	<div class="top-nav">
 		<a href="{base}/" class="back-link">← Back to App</a>
 	</div>
 
-	<div class="canvas-container">
-		{#if nodes.length > 0}
-			<!-- Zoom controls -->
-			<!-- <div class="zoom-controls">
-				<button onclick={zoomIn} class="zoom-btn" title="Zoom In">+</button>
-				<button onclick={resetZoom} class="zoom-btn" title="Reset Zoom">
-					{Math.round(scale * 100)}%
-				</button>
-				<button onclick={zoomOut} class="zoom-btn" title="Zoom Out">−</button>
-			</div> -->
+	<!-- Zoom Display -->
+	<div class="zoom-display">
+		{Math.round(scale * 100)}%
+	</div>
 
-			<Stage
-				{...stageConfig}
-				bind:this={stageRef}
-				scaleX={scale}
-				scaleY={scale}
-				x={stageX}
-				y={stageY}
-				draggable={true}
-				onwheel={handleWheel}
-				ondragend={handleStageDragEnd}
-			>
-				<Layer>
-					<!-- Render arrows first so they appear behind nodes -->
-					{#each connectors as connector (connector.id)}
-						{#if connector.points}
-							<Arrow
-								points={connector.points}
-								stroke="#ff6b4a"
-								fill="#ff6b4a"
-								strokeWidth={2}
-								pointerLength={10}
-								pointerWidth={10}
-								listening={false}
-							/>
-						{/if}
-					{/each}
+	{#if nodes.length > 0}
+		<Stage
+			{...stageConfig}
+			bind:this={stageRef}
+			scaleX={scale}
+			scaleY={scale}
+			x={stageX}
+			y={stageY}
+			draggable={false}
+			onwheel={handleWheel}
+			ondragend={handleStageDragEnd}
+			onmousedown={handleMouseDown}
+			onmousemove={handleMouseMove}
+			onmouseup={handleMouseUp}
+			ontouchstart={handleMouseDown}
+			ontouchmove={handleMouseMove}
+			ontouchend={handleMouseUp}
+		>
+			<Layer>
+				<!-- Render arrows first so they appear behind nodes -->
+				{#each connectors as connector (connector.id)}
+					{#if connector.points}
+						<Arrow
+							points={connector.points}
+							stroke="#ff6b4a"
+							fill="#ff6b4a"
+							strokeWidth={2}
+							pointerLength={10}
+							pointerWidth={10}
+							listening={false}
+						/>
+					{/if}
+				{/each}
 
-					{#each nodes as node (node.id)}
-						<Group
-							bind:x={node.x}
-							bind:y={node.y}
-							id={node.id}
-							draggable={false}
-							bind:this={node.component}
-							ondragstart={handleDragStart}
-							ondragmove={handleDragMove}
-							ondragend={handleDragEnd}
-						>
+				{#each nodes as node (node.id)}
+					<Group
+						bind:x={node.x}
+						bind:y={node.y}
+						id={node.id}
+						draggable={activeTool === 'cursor'}
+						bind:this={node.component}
+						ondragstart={handleDragStart}
+						ondragmove={handleDragMove}
+						ondragend={handleDragEnd}
+					>
 							<!-- Main image -->
 							<KonvaImage
 								image={node.image}
@@ -376,65 +424,42 @@
 					{/each}
 				</Layer>
 			</Stage>
+
+			<!-- Toolbelt -->
+			<div class="toolbelt">
+				<button
+					class="tool-button"
+					class:active={activeTool === 'cursor'}
+					onclick={() => (activeTool = 'cursor')}
+					title="Cursor Tool - Select and move nodes"
+				>
+					<img src="{base}/assets/toolbelt-icons/cursor-tool.svg" alt="Cursor Tool" />
+				</button>
+				<button
+					class="tool-button"
+					class:active={activeTool === 'hand'}
+					onclick={() => (activeTool = 'hand')}
+					title="Hand Tool - Pan canvas"
+				>
+					<img src="{base}/assets/toolbelt-icons/hand-tool.svg" alt="Hand Tool" />
+				</button>
+			</div>
 		{:else}
 			<div class="empty-state">
 				<p>No history data available</p>
 				<a href="{base}/" class="link">Go back and create some images</a>
 			</div>
 		{/if}
-	</div>
 </div>
 
 <style>
-	.visualization-page {
-		width: 100%;
-		min-height: 100vh;
-		display: flex;
-		flex-direction: column;
-		padding: 2rem;
+	.canvas-page {
+		width: 100vw;
+		height: 100vh;
+		overflow: hidden;
 		background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
-	}
-
-	.header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 2rem;
-		max-width: 100%;
-	}
-
-	.title {
-		font-size: 2rem;
-		font-weight: 300;
-		font-style: italic;
-		color: white;
-		margin: 0;
-	}
-
-	.back-link {
-		padding: 0.5rem 1rem;
-		border-radius: 0.5rem;
-		border: 1px solid var(--color-accent);
-		background-color: transparent;
-		color: var(--color-accent);
-		text-decoration: none;
-		font-size: 0.9rem;
-		transition: all 0.2s ease;
-		white-space: nowrap;
-	}
-
-	.back-link:hover {
-		background-color: var(--color-accent);
-		color: white;
-	}
-
-	.canvas-container {
-		flex: 1;
-		background-color: rgba(255, 255, 255, 0.05);
-		border-radius: 1rem;
-		overflow: auto;
-		padding: 2rem;
 		position: relative;
+		cursor: default;
 	}
 
 	.empty-state {
@@ -442,7 +467,8 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		height: 400px;
+		width: 100%;
+		height: 100%;
 		color: rgba(255, 255, 255, 0.6);
 		gap: 1rem;
 	}
@@ -462,17 +488,120 @@
 		opacity: 0.8;
 	}
 
-	@media (max-width: 600px) {
-		.visualization-page {
-			padding: 1rem;
-		}
+	/* Toolbelt */
+	.toolbelt {
+		position: fixed;
+		bottom: 2rem;
+		left: 50%;
+		transform: translateX(-50%);
+		display: flex;
+		gap: 0.5rem;
+		padding: 0.5rem;
+		background: rgba(20, 20, 20, 0.95);
+		backdrop-filter: blur(10px);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 0.75rem;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+		z-index: 1000;
+	}
 
-		.title {
-			font-size: 1.5rem;
-		}
+	.tool-button {
+		width: 48px;
+		height: 48px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: transparent;
+		border: 2px solid transparent;
+		border-radius: 0.5rem;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		padding: 0;
+	}
 
-		.canvas-container {
-			padding: 1rem;
-		}
+	.tool-button img {
+		width: 24px;
+		height: 24px;
+		filter: invert(1);
+		opacity: 0.6;
+		transition: opacity 0.2s ease;
+	}
+
+	.tool-button:hover {
+		background: rgba(255, 255, 255, 0.05);
+	}
+
+	.tool-button:hover img {
+		opacity: 0.9;
+	}
+
+	.tool-button.active {
+		background: rgba(255, 107, 74, 0.15);
+		border-color: var(--color-accent);
+	}
+
+	.tool-button.active img {
+		opacity: 1;
+		filter: invert(1) sepia(1) saturate(5) hue-rotate(340deg);
+	}
+
+	/* Change cursor based on active tool */
+	.canvas-page:has(.tool-button.active[title*='Hand']) {
+		cursor: grab;
+	}
+
+	.canvas-page:has(.tool-button.active[title*='Hand']):active {
+		cursor: grabbing;
+	}
+
+	/* Top Navigation */
+	.top-nav {
+		position: fixed;
+		top: 2rem;
+		left: 1rem;
+		z-index: 1000;
+	}
+
+	.back-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.75rem 1.25rem;
+		background: rgba(20, 20, 20, 0.95);
+		backdrop-filter: blur(10px);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 0.75rem;
+		color: var(--color-accent);
+		text-decoration: none;
+		font-size: 0.9rem;
+		font-weight: 500;
+		transition: all 0.2s ease;
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+	}
+
+	.back-link:hover {
+		background: rgba(255, 107, 74, 0.15);
+		border-color: var(--color-accent);
+		transform: translateX(-2px);
+	}
+
+	/* Zoom Display */
+	.zoom-display {
+		position: fixed;
+		top: 2rem;
+		right: 1rem;
+		padding: 0.75rem 1.25rem;
+		background: rgba(20, 20, 20, 0.95);
+		backdrop-filter: blur(10px);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 0.75rem;
+		color: rgba(255, 255, 255, 0.8);
+		font-size: 0.9rem;
+		font-weight: 500;
+		font-variant-numeric: tabular-nums;
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+		z-index: 1000;
+		min-width: 70px;
+		text-align: center;
 	}
 </style>
