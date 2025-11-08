@@ -32,7 +32,7 @@
 				<li>Be specific and descriptive in your prompts for better results.</li>
 				<li>Lower familiarity values create more dramatic transformations.</li>
 				<li>Higher familiarity values keep the result closer to the original.</li>
-				<li>Use the history feature to compare different variations.</li>
+				<li>Use the history feature to compare different variations..</li>
 			</ul>
 		</div>
 	</div>
