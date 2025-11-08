@@ -1,4 +1,7 @@
 <script>
+	import Icon from './Icon.svelte';
+	import book from '$lib/assets/icons/book.svg?raw';
+
 	let { promptValue = $bindable(), denoise = $bindable(), onOpenLibrary } = $props();
 
 	const MAX_LENGTH = 500;
@@ -22,7 +25,7 @@
 			aria-label="Enter your prompt"
 		/>
 		<button class="library-button" onclick={onOpenLibrary} aria-label="Open prompt library">
-			📚
+			<Icon src={book} size={24} />
 		</button>
 		{#if promptValue}
 			<span class="char-counter" class:warning={promptValue.length > MAX_LENGTH * 0.9}>
@@ -82,13 +85,13 @@
 	.library-button {
 		position: absolute;
 		right: 1rem;
+		width: 2.5rem;
+		height: 2.5rem;
+		border-radius: 50%;
+		border: 2px solid rgba(255, 255, 255, 0.2);
 		background: transparent;
-		border: none;
 		color: rgba(255, 255, 255, 0.6);
 		cursor: pointer;
-		padding: 0.5rem;
-		font-size: 1.25rem;
-		border-radius: 0.375rem;
 		transition: all 0.2s ease;
 		display: flex;
 		align-items: center;
@@ -96,9 +99,10 @@
 	}
 
 	.library-button:hover {
-		background: rgba(255, 255, 255, 0.1);
-		color: var(--color-accent);
-		transform: scale(1.1);
+		border-color: var(--color-accent);
+		background: var(--color-accent);
+		color: white;
+		transform: scale(1.05);
 	}
 
 	.char-counter {

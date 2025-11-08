@@ -13,10 +13,10 @@
 			case 'error':
 				return closeIcon;
 			case 'warning':
-				return '⚠️';
+				return checkIcon; // Use check icon for warning too
 			case 'info':
 			default:
-				return 'ℹ️';
+				return checkIcon; // Use check icon for info
 		}
 	}
 </script>
@@ -32,13 +32,7 @@
 		>
 			<div class="toast-content">
 				<div class="toast-icon">
-					{#if notification.type === 'success'}
-						<Icon src={checkIcon} size={20} />
-					{:else if notification.type === 'error'}
-						<Icon src={closeIcon} size={20} />
-					{:else}
-						<span class="emoji-icon">{getIcon(notification.type)}</span>
-					{/if}
+					<Icon src={getIcon(notification.type)} size={20} />
 				</div>
 				<div class="toast-message">{notification.message}</div>
 			</div>
@@ -73,11 +67,9 @@
 		justify-content: space-between;
 		gap: 1rem;
 		padding: 1rem 1.25rem;
-		border-radius: 0.75rem;
-		background: rgba(20, 20, 20, 0.98);
-		backdrop-filter: blur(10px);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+		border-radius: 2rem;
+		background: rgba(20, 20, 20, 0.95);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		color: white;
 		font-size: 0.95rem;
 		line-height: 1.5;
@@ -95,11 +87,6 @@
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
-	}
-
-	.emoji-icon {
-		font-size: 1.25rem;
-		line-height: 1;
 	}
 
 	.toast-message {
@@ -128,7 +115,7 @@
 
 	/* Toast type variants */
 	.toast-success {
-		border-left: 4px solid #10b981;
+		border-color: #10b981;
 	}
 
 	.toast-success .toast-icon {
@@ -136,7 +123,7 @@
 	}
 
 	.toast-error {
-		border-left: 4px solid #ef4444;
+		border-color: #ef4444;
 	}
 
 	.toast-error .toast-icon {
@@ -144,7 +131,7 @@
 	}
 
 	.toast-warning {
-		border-left: 4px solid #f59e0b;
+		border-color: #f59e0b;
 	}
 
 	.toast-warning .toast-icon {
@@ -152,7 +139,7 @@
 	}
 
 	.toast-info {
-		border-left: 4px solid var(--color-accent);
+		border-color: var(--color-accent);
 	}
 
 	.toast-info .toast-icon {

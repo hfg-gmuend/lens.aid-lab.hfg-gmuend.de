@@ -184,15 +184,14 @@
 	}
 
 	.prompt-library {
-		background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
-		border-radius: 1rem;
-		border: 1px solid rgba(255, 255, 255, 0.1);
+		background: #000000;
+		border-radius: 1.5rem;
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		width: 100%;
 		max-width: 800px;
 		max-height: 90vh;
 		display: flex;
 		flex-direction: column;
-		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 	}
 
 	.library-header {
@@ -282,8 +281,8 @@
 
 	.category-button {
 		padding: 0.5rem 1rem;
-		background: rgba(255, 255, 255, 0.05);
-		border: 1px solid rgba(255, 255, 255, 0.1);
+		background: transparent;
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 2rem;
 		color: rgba(255, 255, 255, 0.8);
 		cursor: pointer;
@@ -292,8 +291,8 @@
 	}
 
 	.category-button:hover {
-		background: rgba(255, 255, 255, 0.1);
-		color: white;
+		border-color: var(--color-accent);
+		color: var(--color-accent);
 	}
 
 	.category-button.active {
@@ -308,9 +307,9 @@
 
 	.action-button {
 		padding: 0.75rem 1.25rem;
-		background: rgba(255, 107, 74, 0.15);
-		border: 1px solid var(--color-accent);
-		border-radius: 0.5rem;
+		background: transparent;
+		border: 2px solid var(--color-accent);
+		border-radius: 2rem;
 		color: var(--color-accent);
 		cursor: pointer;
 		font-size: 0.9rem;
@@ -320,6 +319,7 @@
 	.action-button:hover {
 		background: var(--color-accent);
 		color: white;
+		transform: scale(1.05);
 	}
 
 	.prompts-list {
@@ -333,17 +333,17 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 1rem;
-		background: rgba(255, 255, 255, 0.03);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		border-radius: 0.5rem;
+		background: transparent;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 2rem;
 		cursor: pointer;
 		transition: all 0.2s ease;
 		gap: 1rem;
 	}
 
 	.prompt-item:hover {
-		background: rgba(255, 255, 255, 0.08);
 		border-color: var(--color-accent);
+		transform: scale(1.02);
 	}
 
 	.prompt-content {

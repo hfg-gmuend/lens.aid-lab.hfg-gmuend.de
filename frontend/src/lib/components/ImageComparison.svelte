@@ -108,15 +108,14 @@
 	}
 
 	.comparison-container {
-		background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
-		border-radius: 1rem;
-		border: 1px solid rgba(255, 255, 255, 0.1);
+		background: #000000;
+		border-radius: 1.5rem;
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		width: 100%;
 		max-width: 1200px;
 		max-height: 90vh;
 		display: flex;
 		flex-direction: column;
-		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 	}
 
 	.comparison-header {
@@ -225,7 +224,6 @@
 		left: 50%;
 		width: 2px;
 		background: var(--color-accent);
-		box-shadow: 0 0 10px rgba(255, 107, 74, 0.5);
 	}
 
 	.handle-grip {
@@ -241,7 +239,6 @@
 		align-items: center;
 		justify-content: center;
 		color: white;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 		pointer-events: all;
 		cursor: ew-resize;
 	}
@@ -270,7 +267,6 @@
 		background: var(--color-accent);
 		cursor: pointer;
 		border: none;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 	}
 
 	.position-slider::-moz-range-thumb {
@@ -280,7 +276,6 @@
 		background: var(--color-accent);
 		cursor: pointer;
 		border: none;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 	}
 
 	@media (max-width: 600px) {

@@ -9,6 +9,7 @@
 	import PromptLibrary from '$lib/components/PromptLibrary.svelte';
 	import ImageComparison from '$lib/components/ImageComparison.svelte';
 	import refresh from '$lib/assets/icons/refresh.svg?raw';
+	import compare from '$lib/assets/icons/compare.svg?raw';
 
 	import { notifySuccess, notifyError, notifyWarning, notifyInfo } from '$lib/stores/notifications.js';
 	import { promptHistory } from '$lib/stores/prompts.js';
@@ -616,7 +617,7 @@
 			{:else if resultImage}
 				<img src={resultImage} alt="Transformed future vision" class="result-image" />
 				<button class="comparison-button" onclick={handleComparison} aria-label="Compare before and after">
-					⚖️ Compare
+					<Icon src={compare} size={24} />
 				</button>
 			{:else}
 				<div class="empty-state">
@@ -818,26 +819,23 @@
 		position: absolute;
 		bottom: 5rem;
 		right: 1.5rem;
-		padding: 0.75rem 1.25rem;
-		background: rgba(20, 20, 20, 0.9);
-		backdrop-filter: blur(10px);
-		border: 1px solid var(--color-accent);
-		border-radius: 0.75rem;
+		width: 3.5rem;
+		height: 3.5rem;
+		border-radius: 50%;
+		border: 2px solid var(--color-accent);
+		background: transparent;
 		color: var(--color-accent);
-		font-size: 0.9rem;
 		cursor: pointer;
 		transition: all 0.2s ease;
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+		justify-content: center;
 	}
 
 	.comparison-button:hover {
 		background: var(--color-accent);
 		color: white;
-		transform: translateY(-2px);
-		box-shadow: 0 6px 16px rgba(255, 107, 74, 0.4);
+		transform: scale(1.05);
 	}
 
 	.empty-state {
