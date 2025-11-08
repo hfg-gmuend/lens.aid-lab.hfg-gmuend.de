@@ -439,45 +439,6 @@
 		position: relative;
 	}
 
-	.zoom-controls {
-		position: absolute;
-		top: 2rem;
-		right: 2rem;
-		display: flex;
-		gap: 0.5rem;
-		z-index: 10;
-		background-color: rgba(0, 0, 0, 0.7);
-		padding: 0.5rem;
-		border-radius: 0.5rem;
-		backdrop-filter: blur(10px);
-	}
-
-	.zoom-btn {
-		width: 2.5rem;
-		height: 2.5rem;
-		border: 1px solid var(--color-accent);
-		background-color: rgba(255, 255, 255, 0.1);
-		color: white;
-		border-radius: 0.25rem;
-		cursor: pointer;
-		font-size: 1.2rem;
-		font-weight: bold;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: all 0.2s ease;
-		user-select: none;
-	}
-
-	.zoom-btn:hover {
-		background-color: var(--color-accent);
-		transform: scale(1.05);
-	}
-
-	.zoom-btn:active {
-		transform: scale(0.95);
-	}
-
 	.empty-state {
 		display: flex;
 		flex-direction: column;
