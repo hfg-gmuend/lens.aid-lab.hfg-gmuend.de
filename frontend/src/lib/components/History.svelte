@@ -100,7 +100,7 @@
 		</div>
 		<div class="history-grid" class:large-view={viewMode === 'large'}>
 			{#if groupMode === 'grouped'}
-				{#each displayHistory as group (group.id)}
+				{#each displayHistory as group (group.inputHash)}
 					<HistoryGroup
 						{group}
 						{onLoadItem}
