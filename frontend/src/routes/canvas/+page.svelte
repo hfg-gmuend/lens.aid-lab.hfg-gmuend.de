@@ -7,8 +7,8 @@
 
 	let history = $state([]);
 	let stageConfig = $state({
-		width: window.innerWidth,
-		height: window.innerHeight
+		width: 800,
+		height: 600
 	});
 	let nodes = $state([]);
 	let connectors = $state([]);
@@ -292,6 +292,10 @@
 	}
 
 	onMount(() => {
+		// Initialize stage size with actual window dimensions
+		stageConfig.width = window.innerWidth;
+		stageConfig.height = window.innerHeight;
+		
 		loadHistoryFromStorage();
 		window.addEventListener('resize', handleResize);
 
