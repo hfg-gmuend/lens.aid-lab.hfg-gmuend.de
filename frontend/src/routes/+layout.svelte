@@ -2,6 +2,7 @@
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import Toast from '$lib/components/Toast.svelte';
+	import NetworkStatus from '$lib/components/NetworkStatus.svelte';
 
 	let { children } = $props();
 </script>
@@ -12,3 +13,4 @@
 
 {@render children()}
 <Toast />
+<NetworkStatus />

@@ -13,9 +13,13 @@
 
 	import { notifySuccess, notifyError, notifyWarning, notifyInfo } from '$lib/stores/notifications.js';
 	import { promptHistory } from '$lib/stores/prompts.js';
+	import { settings } from '$lib/stores/settings.js';
 	import { validatePrompt, sanitizePrompt } from '$lib/utils/validation.js';
 	import { validateImage, compressImage } from '$lib/utils/imageUtils.js';
 	import { uploadImage, checkConnectivity } from '$lib/api/client.js';
+	import { registerShortcut, initKeyboardShortcuts, clearAllShortcuts } from '$lib/utils/keyboard.js';
+	import { initNetworkMonitor } from '$lib/utils/network.js';
+	import { cacheImage, getCachedImage, preloadImage } from '$lib/utils/cache.js';
 
 	const API_URL = 'https://api-h34hnr2j2nm2me2d.transferscope.org/';
 	const CLIENT_ID = 'web';
@@ -23,7 +27,7 @@
 	const MAX_HISTORY = 20;
 
 	let promptValue = $state('');
-	let denoise = $state(0.85); // 0.4-1.0 range, default 0.85
+	let denoise = $state($settings.denoise); // 0.4-1.0 range, loaded from settings
 	let seed = $state(-1);
 
 	// UI State
@@ -42,9 +46,22 @@
 	let loading = $state(false);
 	let loopFrame = $state(null);
 	let history = $state([]);
-	let historyViewMode = $state('grid'); // 'grid' or 'large'
-	let historyGroupMode = $state('grouped'); // 'grouped' or 'standard'
+	let historyViewMode = $state($settings.historyViewMode); // 'grid' or 'large'
+	let historyGroupMode = $state($settings.historyGroupMode); // 'grouped' or 'standard'
 	let currentInputHash = $state(null); // Track hash of current canvas content
+
+	// Persist settings when they change
+	$effect(() => {
+		settings.updateSetting('denoise', denoise);
+	});
+
+	$effect(() => {
+		settings.updateSetting('historyViewMode', historyViewMode);
+	});
+
+	$effect(() => {
+		settings.updateSetting('historyGroupMode', historyGroupMode);
+	});
 
 	const CANVAS_SIZE = 1024;
 
@@ -278,6 +295,10 @@
 			const outputUrl = API_URL + data.output.replace(/^\//, '');
 			const inputUrl = API_URL + data.input.replace(/^\//, '');
 
+			// Cache images for faster loading
+			preloadImage(outputUrl).catch(console.warn);
+			preloadImage(inputUrl).catch(console.warn);
+
 			// Display result
 			resultImage = outputUrl;
 			inputImageUrl = inputUrl;
@@ -288,7 +309,7 @@
 			// Add to prompt history
 			promptHistory.add(cleanPrompt);
 
-			notifySuccess('Image transformed successfully! 🎨');
+			notifySuccess('Image transformed successfully');
 		} catch (error) {
 			console.error('Error transferring image:', error);
 			notifyError(error.message || 'Failed to transform image. Please try again.');
@@ -540,11 +561,36 @@
 			context = canvasElement.getContext('2d', { willReadFrequently: true });
 		}
 		loadHistoryFromStorage();
+
+		// Setup network monitoring
+		const cleanupNetwork = initNetworkMonitor();
+
+		// Setup keyboard shortcuts
+		const cleanupKeyboard = initKeyboardShortcuts();
+
+		// Register shortcuts
+		registerShortcut('ctrl+u', () => handleUpload(), { preventDefault: true }); // Upload image
+		registerShortcut('ctrl+enter', () => handleTransfer(), { preventDefault: true }); // Transfer/Generate
+		registerShortcut('ctrl+k', () => handleOpenLibrary(), { preventDefault: true }); // Open prompt library
+		registerShortcut('ctrl+d', () => handleDownload(), { preventDefault: true }); // Download
+		registerShortcut('ctrl+r', () => handleReuse(), { preventDefault: true }); // Reuse
+		registerShortcut('c', () => handleCamera()); // Toggle camera
+		registerShortcut('escape', () => {
+			if (showPromptLibrary) showPromptLibrary = false;
+			if (showComparison) showComparison = false;
+		}); // Close modals
+
+		return () => {
+			cleanupNetwork();
+			cleanupKeyboard();
+			clearAllShortcuts();
+		};
 	});
 
 	onDestroy(() => {
 		stopLoop();
 		stopCamera();
+		clearAllShortcuts();
 	});
 </script>
 

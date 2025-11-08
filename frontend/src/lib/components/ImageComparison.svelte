@@ -1,4 +1,7 @@
 <script>
+	import Icon from './Icon.svelte';
+	import closeIcon from '$lib/assets/icons/close.svg?raw';
+
 	let { inputImage, outputImage, onClose } = $props();
 
 	let sliderPosition = $state(50);
@@ -41,7 +44,7 @@
 		<div class="comparison-header">
 			<h2>Before / After Comparison</h2>
 			<button class="close-button" onclick={onClose} aria-label="Close comparison">
-				✕
+				<Icon src={closeIcon} size={24} />
 			</button>
 		</div>
 

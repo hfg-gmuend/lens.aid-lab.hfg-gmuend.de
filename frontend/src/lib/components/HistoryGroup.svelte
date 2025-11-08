@@ -3,6 +3,7 @@
 	import close from '$lib/assets/icons/close.svg?raw';
 	import chevronDown from '$lib/assets/icons/chevron-down.svg?raw';
 	import chevronUp from '$lib/assets/icons/chevron-up.svg?raw';
+	import { lazyload } from '$lib/utils/lazyload.js';
 
 	let { group, onLoadItem, onDeleteItem, onDeleteGroup, isLargeView = false } = $props();
 
@@ -53,7 +54,7 @@
 	<div class="group-container">
 		<!-- Input Image (Left) -->
 		<div class="input-section">
-			<img src={group.inputImage} alt="Input" class="input-image" />
+			<img use:lazyload={group.inputImage} alt="Input" class="input-image" />
 			{#if group.variations.length > 1}
 				<div class="variation-count-badge">
 					{group.variations.length}
@@ -76,7 +77,7 @@
 								onclick={() => handleVariationClick(variation)}
 								aria-label="Load variation: {variation.prompt}"
 							>
-								<img src={variation.resultImage} alt="Result" class="variation-image" />
+								<img use:lazyload={variation.resultImage} alt="Result" class="variation-image" />
 								<div class="variation-overlay">
 									<p class="variation-prompt">{variation.prompt}</p>
 									<p class="variation-denoise">Familiarity: {variation.denoise.toFixed(2)}</p>
@@ -99,7 +100,7 @@
 				<!-- Collapsed: Show selected/first variation -->
 				<div class="selected-variation">
 					<button class="variation-button" onclick={() => handleVariationClick(selectedVariation)}>
-						<img src={selectedVariation.resultImage} alt="Result" class="variation-image" />
+						<img use:lazyload={selectedVariation.resultImage} alt="Result" class="variation-image" />
 					</button>
 					<div class="variation-info">
 						<p class="variation-prompt">{selectedVariation.prompt}</p>

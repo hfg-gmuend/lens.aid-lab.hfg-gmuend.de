@@ -4,6 +4,10 @@
 	import grid from '$lib/assets/icons/grid.svg?raw';
 	import rows from '$lib/assets/icons/rows.svg?raw';
 	import close from '$lib/assets/icons/close.svg?raw';
+	import download from '$lib/assets/icons/download.svg?raw';
+	import { exportHistoryAsJSON, formatBytes, calculateHistorySize } from '$lib/utils/export.js';
+	import { notifySuccess, notifyError } from '$lib/stores/notifications.js';
+	import { lazyload } from '$lib/utils/lazyload.js';
 
 	let {
 		history,
@@ -26,6 +30,17 @@
 	function handleDelete(event, item) {
 		event.stopPropagation(); // Prevent triggering the load action
 		onDeleteItem(item.id);
+	}
+
+	function handleExport() {
+		try {
+			exportHistoryAsJSON(history);
+			const size = formatBytes(calculateHistorySize(history));
+			notifySuccess(`History exported (${size})`);
+		} catch (error) {
+			console.error('Failed to export history:', error);
+			notifyError('Failed to export history');
+		}
 	}
 
 	// Convert grouped data to flat list for standard view
@@ -65,6 +80,9 @@
 				>
 					<Icon src={viewMode === 'grid' ? rows : grid} size={20} />
 				</button>
+				<button class="history-toggle" onclick={handleExport} aria-label="Export history">
+					<Icon src={download} size={20} />
+				</button>
 				<button class="history-clear" onclick={onClearHistory}>Clear All</button>
 			</div>
 		</div>
@@ -98,9 +116,9 @@
 							<Icon src={close} size={16} />
 						</div>
 						<div class="history-images">
-							<img src={item.inputImage} alt="Input" class="history-image history-input" />
+							<img use:lazyload={item.inputImage} alt="Input" class="history-image history-input" />
 							<div class="history-arrow">→</div>
-							<img src={item.resultImage} alt="Result" class="history-image history-result" />
+							<img use:lazyload={item.resultImage} alt="Result" class="history-image history-result" />
 						</div>
 						<div class="history-info">
 							<p class="history-prompt">{item.prompt}</p>

@@ -90,7 +90,7 @@
 
 					<div class="prompt-actions">
 						<button class="action-button" onclick={handleRandomPrompt}>
-							🎲 Random Prompt
+							Random Prompt
 						</button>
 					</div>
 
