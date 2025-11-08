@@ -6,7 +6,15 @@
 	import ControlBar from '$lib/components/ControlBar.svelte';
 	import History from '$lib/components/History.svelte';
 	import PanelControls from '$lib/components/PanelControls.svelte';
+	import PromptLibrary from '$lib/components/PromptLibrary.svelte';
+	import ImageComparison from '$lib/components/ImageComparison.svelte';
 	import refresh from '$lib/assets/icons/refresh.svg?raw';
+
+	import { notifySuccess, notifyError, notifyWarning, notifyInfo } from '$lib/stores/notifications.js';
+	import { promptHistory } from '$lib/stores/prompts.js';
+	import { validatePrompt, sanitizePrompt } from '$lib/utils/validation.js';
+	import { validateImage, compressImage } from '$lib/utils/imageUtils.js';
+	import { uploadImage, checkConnectivity } from '$lib/api/client.js';
 
 	const API_URL = 'https://api-h34hnr2j2nm2me2d.transferscope.org/';
 	const CLIENT_ID = 'web';
@@ -16,6 +24,12 @@
 	let promptValue = $state('');
 	let denoise = $state(0.85); // 0.4-1.0 range, default 0.85
 	let seed = $state(-1);
+
+	// UI State
+	let showPromptLibrary = $state(false);
+	let showComparison = $state(false);
+	let loadingProgress = $state({ stage: '', progress: 0 });
+	let inputImageUrl = $state(null);
 
 	let canvasElement = $state(null);
 	let videoElement = $state(null);
@@ -68,6 +82,7 @@
 	async function handleCamera() {
 		if (cameraActive) {
 			stopCamera();
+			notifyInfo('Camera stopped');
 			return;
 		}
 
@@ -84,9 +99,10 @@
 			videoElement.play();
 			cameraActive = true;
 			startLoop();
+			notifySuccess('Camera activated');
 		} catch (error) {
 			console.error('Error accessing camera:', error);
-			alert('Failed to access camera. Please check permissions.');
+			notifyError('Failed to access camera. Please check permissions.');
 		}
 	}
 
@@ -116,7 +132,7 @@
 		}
 	}
 
-	// Upload image
+	// Upload image with validation and compression
 	function handleUpload() {
 		stopCamera();
 		const input = document.createElement('input');
@@ -126,43 +142,82 @@
 			const file = e.target.files?.[0];
 			if (!file) return;
 
-			const reader = new FileReader();
-			reader.onload = (e) => {
-				const image = new Image();
-				image.src = e.target.result;
-				image.onload = async () => {
-					if (!context) return;
+			// Validate image
+			const validation = validateImage(file);
+			if (!validation.valid) {
+				notifyError(validation.error);
+				return;
+			}
 
-					// Calculate aspect ratio fit
-					const aspectRatio = image.width / image.height;
-					let drawWidth, drawHeight, offsetX, offsetY;
+			try {
+				notifyInfo('Processing image...');
 
-					if (aspectRatio > 1) {
-						drawWidth = CANVAS_SIZE * aspectRatio;
-						drawHeight = CANVAS_SIZE;
-						offsetX = (CANVAS_SIZE - drawWidth) / 2;
-						offsetY = 0;
-					} else {
-						drawWidth = CANVAS_SIZE;
-						drawHeight = CANVAS_SIZE / aspectRatio;
-						offsetX = 0;
-						offsetY = (CANVAS_SIZE - drawHeight) / 2;
-					}
+				// Compress image if needed
+				let processedFile = file;
+				if (file.size > 2 * 1024 * 1024) {
+					// Compress files larger than 2MB
+					notifyInfo('Compressing image...');
+					processedFile = await compressImage(file, CANVAS_SIZE, CANVAS_SIZE, 0.85);
+				}
 
-					context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-					context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
-					// Update the current input hash after loading new content
-					currentInputHash = await generateInputImageHash();
+				const reader = new FileReader();
+				reader.onload = (e) => {
+					const image = new Image();
+					image.src = e.target.result;
+					image.onload = async () => {
+						if (!context) return;
+
+						// Calculate aspect ratio fit
+						const aspectRatio = image.width / image.height;
+						let drawWidth, drawHeight, offsetX, offsetY;
+
+						if (aspectRatio > 1) {
+							drawWidth = CANVAS_SIZE * aspectRatio;
+							drawHeight = CANVAS_SIZE;
+							offsetX = (CANVAS_SIZE - drawWidth) / 2;
+							offsetY = 0;
+						} else {
+							drawWidth = CANVAS_SIZE;
+							drawHeight = CANVAS_SIZE / aspectRatio;
+							offsetX = 0;
+							offsetY = (CANVAS_SIZE - drawHeight) / 2;
+						}
+
+						context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+						context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+
+						// Update the current input hash after loading new content
+						currentInputHash = await generateInputImageHash();
+
+						notifySuccess('Image loaded successfully');
+					};
 				};
-			};
-			reader.readAsDataURL(file);
+				reader.readAsDataURL(processedFile);
+			} catch (error) {
+				console.error('Error processing image:', error);
+				notifyError('Failed to process image. Please try again.');
+			}
 		};
 		input.click();
 	}
 
-	// Transfer - send canvas to API
+	// Transfer - send canvas to API with validation and error handling
 	async function handleTransfer() {
 		if (loading || !canvasElement) return;
+
+		// Validate prompt
+		const promptValidation = validatePrompt(promptValue);
+		if (!promptValidation.valid) {
+			notifyError(promptValidation.error);
+			return;
+		}
+
+		// Check network connectivity
+		const isOnline = await checkConnectivity();
+		if (!isOnline) {
+			notifyError('No network connection. Please check your internet and try again.');
+			return;
+		}
 
 		// Freeze camera if active
 		if (cameraActive) {
@@ -174,46 +229,49 @@
 		if (!inputHash) {
 			inputHash = await generateInputImageHash();
 			if (!inputHash) {
-				alert('Failed to process image. Please try again.');
+				notifyError('Failed to process image. Please try again.');
 				return;
 			}
 		}
 
 		loading = true;
+		loadingProgress = { stage: 'preparing', progress: 10 };
 
 		try {
+			// Sanitize prompt
+			const cleanPrompt = sanitizePrompt(promptValue);
+
 			// Get image from canvas
+			loadingProgress = { stage: 'preparing', progress: 20 };
 			const imageBlob = await new Promise((resolve) => {
 				canvasElement.toBlob(resolve, 'image/jpeg', 0.8);
 			});
 
-			// Prepare form data
-			const formData = new FormData();
-			formData.append('file', imageBlob);
-
 			// Build query params
-			const params = new URLSearchParams({
+			const params = {
 				client_id: CLIENT_ID,
-				text: promptValue,
+				text: cleanPrompt,
 				seed: '-1',
 				denoise: denoise.toString(),
 				redirect: 'true'
-			});
+			};
 
-			// Send to API
-			const response = await fetch(`${API_URL}lens?${params.toString()}`, {
-				mode: 'cors',
-				method: 'POST',
-				body: formData,
-				credentials: 'include'
-			});
+			// Upload with retry logic
+			const data = await uploadImage(
+				API_URL,
+				imageBlob,
+				params,
+				(progress) => {
+					loadingProgress = progress;
 
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
-			}
-
-			// Parse JSON response
-			const data = await response.json();
+					if (progress.stage === 'retrying') {
+						notifyWarning(`Network error. Retrying... (Attempt ${progress.attempt})`);
+					}
+				},
+				(attempt, error, delay) => {
+					console.log(`Retry attempt ${attempt} after ${delay}ms`, error);
+				}
+			);
 
 			// Construct full URLs from paths (remove leading slash to avoid double slashes)
 			const outputUrl = API_URL + data.output.replace(/^\//, '');
@@ -221,14 +279,21 @@
 
 			// Display result
 			resultImage = outputUrl;
+			inputImageUrl = inputUrl;
 
 			// Save to history with actual values from API and our input hash
 			await saveToHistory(inputHash, inputUrl, outputUrl, data.prompt, data.denoise, data.seed);
+
+			// Add to prompt history
+			promptHistory.add(cleanPrompt);
+
+			notifySuccess('Image transformed successfully! 🎨');
 		} catch (error) {
 			console.error('Error transferring image:', error);
-			alert('Failed to transfer image. Please try again.');
+			notifyError(error.message || 'Failed to transform image. Please try again.');
 		} finally {
 			loading = false;
+			loadingProgress = { stage: '', progress: 0 };
 		}
 	}
 
@@ -253,13 +318,39 @@
 	function handleDownload() {
 		if (!resultImage) return;
 
-		const link = document.createElement('a');
-		link.href = resultImage;
-		const filename = promptValue
-			? `futures-lens-${promptValue.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`
-			: 'futures-lens.jpg';
-		link.download = filename;
-		link.click();
+		try {
+			const link = document.createElement('a');
+			link.href = resultImage;
+			const filename = promptValue
+				? `futures-lens-${promptValue.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`
+				: 'futures-lens.jpg';
+			link.download = filename;
+			link.click();
+			notifySuccess('Image downloaded');
+		} catch (error) {
+			console.error('Error downloading image:', error);
+			notifyError('Failed to download image');
+		}
+	}
+
+	// Open prompt library
+	function handleOpenLibrary() {
+		showPromptLibrary = true;
+	}
+
+	// Select prompt from library
+	function handleSelectPrompt(prompt) {
+		promptValue = prompt;
+		notifySuccess('Prompt selected');
+	}
+
+	// Open comparison view
+	function handleComparison() {
+		if (!inputImageUrl || !resultImage) {
+			notifyWarning('Please generate an image first');
+			return;
+		}
+		showComparison = true;
 	}
 
 	// History management
@@ -478,10 +569,16 @@
 	></video>
 
 	<!-- Main viewport with split-screen -->
-	<div class="main-viewport">
+	<div class="main-viewport" role="main" aria-label="Image transformation interface">
 		<!-- Left Panel (Input) -->
-		<div class="panel panel-left">
-			<canvas bind:this={canvasElement} width={CANVAS_SIZE} height={CANVAS_SIZE} class="canvas">
+		<div class="panel panel-left" aria-label="Input image panel">
+			<canvas
+				bind:this={canvasElement}
+				width={CANVAS_SIZE}
+				height={CANVAS_SIZE}
+				class="canvas"
+				aria-label="Input image canvas"
+			>
 			</canvas>
 
 			<PanelControls
@@ -493,13 +590,34 @@
 		</div>
 
 		<!-- Right Panel (Output) -->
-		<div class="panel panel-right">
+		<div class="panel panel-right" aria-label="Output image panel">
 			{#if loading}
-				<div class="loading-indicator">
+				<div class="loading-indicator" role="status" aria-live="polite">
 					<Icon src={refresh} size={48} class="spin" />
+					<div class="loading-text">
+						{#if loadingProgress.stage === 'preparing'}
+							<p>Preparing image...</p>
+						{:else if loadingProgress.stage === 'uploading'}
+							<p>Uploading...</p>
+						{:else if loadingProgress.stage === 'requesting'}
+							<p>Transforming...</p>
+						{:else if loadingProgress.stage === 'retrying'}
+							<p>Retrying connection...</p>
+						{:else}
+							<p>Processing...</p>
+						{/if}
+						{#if loadingProgress.progress > 0}
+							<div class="progress-bar">
+								<div class="progress-fill" style="width: {loadingProgress.progress}%"></div>
+							</div>
+						{/if}
+					</div>
 				</div>
 			{:else if resultImage}
-				<img src={resultImage} alt="Result" class="result-image" />
+				<img src={resultImage} alt="Transformed future vision" class="result-image" />
+				<button class="comparison-button" onclick={handleComparison} aria-label="Compare before and after">
+					⚖️ Compare
+				</button>
 			{:else}
 				<div class="empty-state">
 					<p>Click transfer to generate</p>
@@ -520,7 +638,7 @@
 	</div>
 
 	<!-- Bottom control bar -->
-	<ControlBar bind:promptValue bind:denoise />
+	<ControlBar bind:promptValue bind:denoise onOpenLibrary={handleOpenLibrary} />
 
 	<!-- History Section -->
 	<History
@@ -533,6 +651,23 @@
 		onClearHistory={clearHistory}
 	/>
 </div>
+
+<!-- Prompt Library Modal -->
+{#if showPromptLibrary}
+	<PromptLibrary
+		onSelectPrompt={handleSelectPrompt}
+		onClose={() => (showPromptLibrary = false)}
+	/>
+{/if}
+
+<!-- Image Comparison Modal -->
+{#if showComparison && inputImageUrl && resultImage}
+	<ImageComparison
+		inputImage={inputImageUrl}
+		outputImage={resultImage}
+		onClose={() => (showComparison = false)}
+	/>
+{/if}
 
 <style>
 	.page-container {
@@ -633,8 +768,10 @@
 
 	.loading-indicator {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
+		gap: 1.5rem;
 		color: var(--color-accent);
 	}
 
@@ -649,6 +786,58 @@
 		to {
 			transform: rotate(360deg);
 		}
+	}
+
+	.loading-text {
+		text-align: center;
+		min-width: 200px;
+	}
+
+	.loading-text p {
+		margin: 0 0 0.75rem 0;
+		color: rgba(255, 255, 255, 0.9);
+		font-size: 1rem;
+	}
+
+	.progress-bar {
+		width: 200px;
+		height: 6px;
+		background: rgba(255, 255, 255, 0.1);
+		border-radius: 3px;
+		overflow: hidden;
+	}
+
+	.progress-fill {
+		height: 100%;
+		background: var(--color-accent);
+		transition: width 0.3s ease;
+		border-radius: 3px;
+	}
+
+	.comparison-button {
+		position: absolute;
+		bottom: 5rem;
+		right: 1.5rem;
+		padding: 0.75rem 1.25rem;
+		background: rgba(20, 20, 20, 0.9);
+		backdrop-filter: blur(10px);
+		border: 1px solid var(--color-accent);
+		border-radius: 0.75rem;
+		color: var(--color-accent);
+		font-size: 0.9rem;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	}
+
+	.comparison-button:hover {
+		background: var(--color-accent);
+		color: white;
+		transform: translateY(-2px);
+		box-shadow: 0 6px 16px rgba(255, 107, 74, 0.4);
 	}
 
 	.empty-state {
