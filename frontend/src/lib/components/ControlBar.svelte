@@ -50,6 +50,8 @@
 
 	.prompt-input:focus {
 		border-color: var(--color-accent);
+		outline: none;
+		box-shadow: 0 0 0 2px rgba(255, 107, 74, 0.2);
 	}
 
 	.slider-container {

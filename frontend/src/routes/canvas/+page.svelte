@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
-	import { Stage, Layer, Image as KonvaImage, Group, Circle, Text, Arrow } from 'svelte-konva';
+	import { Stage, Layer, Image as KonvaImage, Group, Circle, Text, Arrow, Line } from 'svelte-konva';
 
 	const HISTORY_KEY = 'futures-lens-history';
 
@@ -26,7 +26,7 @@
 	let isPanning = $state(false);
 	let lastPointerPosition = $state(null);
 
-	const SCALE_BY = 1.05;
+	const SCALE_BY = 1.02; // Smaller increment for smoother zoom
 	const MIN_SCALE = 0.1;
 	const MAX_SCALE = 5;
 
@@ -36,6 +36,46 @@
 	const SPACING_Y = 300;
 	const VARIATION_OFFSET = 200;
 	const VARIATION_SPACING_Y = 120;
+
+	// Grid configuration
+	const GRID_SIZE = 50; // Grid cell size in pixels
+	const GRID_COLOR = 'rgba(255, 255, 255, 0.03)';
+	const GRID_STROKE_WIDTH = 1;
+
+	// Cache grid lines to avoid recalculation on every frame
+	let cachedGridLines = $state({ vertical: [], horizontal: [] });
+	let lastGridUpdate = $state({ x: 0, y: 0, scale: 1 });
+
+	// Calculate grid lines based on viewport with throttling
+	function updateGridLines() {
+		if (!stageConfig.width || !stageConfig.height) return;
+
+		// Only update if moved significantly (throttle updates)
+		const dx = Math.abs(stageX - lastGridUpdate.x);
+		const dy = Math.abs(stageY - lastGridUpdate.y);
+		const dScale = Math.abs(scale - lastGridUpdate.scale);
+
+		if (dx < GRID_SIZE / 2 && dy < GRID_SIZE / 2 && dScale < 0.1) return;
+
+		lastGridUpdate = { x: stageX, y: stageY, scale };
+
+		const startX = Math.floor((-stageX / scale) / GRID_SIZE) * GRID_SIZE;
+		const endX = Math.ceil(((-stageX + stageConfig.width) / scale) / GRID_SIZE) * GRID_SIZE;
+		const startY = Math.floor((-stageY / scale) / GRID_SIZE) * GRID_SIZE;
+		const endY = Math.ceil(((-stageY + stageConfig.height) / scale) / GRID_SIZE) * GRID_SIZE;
+
+		const vertical = [];
+		for (let x = startX; x <= endX; x += GRID_SIZE) {
+			vertical.push([x, startY, x, endY]);
+		}
+
+		const horizontal = [];
+		for (let y = startY; y <= endY; y += GRID_SIZE) {
+			horizontal.push([startX, y, endX, y]);
+		}
+
+		cachedGridLines = { vertical, horizontal };
+	}
 
 	function loadHistoryFromStorage() {
 		try {
@@ -215,6 +255,7 @@
 			stageY += dy;
 
 			lastPointerPosition = pointer;
+			updateGridLines(); // Update grid during pan
 		}
 	}
 
@@ -227,24 +268,39 @@
 
 	function handleWheel(e) {
 		e.evt.preventDefault();
+		e.evt.stopPropagation();
 
 		if (!stageRef) return;
 		const stage = stageRef.node;
 		if (!stage) return;
 
+		const pointer = stage.getPointerPosition();
+
 		// Check if this is a pinch-to-zoom gesture (ctrlKey is set for pinch gestures)
 		if (e.evt.ctrlKey) {
 			// Zoom behavior
 			const oldScale = scale;
-			const pointer = stage.getPointerPosition();
 
 			const mousePointTo = {
 				x: (pointer.x - stageX) / oldScale,
 				y: (pointer.y - stageY) / oldScale
 			};
 
-			let direction = e.evt.deltaY > 0 ? -1 : 1;
-			const newScale = direction > 0 ? oldScale * SCALE_BY : oldScale / SCALE_BY;
+			// Calculate zoom direction and amount
+			let delta = e.evt.deltaY;
+			
+			// Normalize wheel delta for different input devices
+			if (e.evt.deltaMode === 1) {
+				// DOM_DELTA_LINE
+				delta *= 33;
+			} else if (e.evt.deltaMode === 2) {
+				// DOM_DELTA_PAGE
+				delta *= 100;
+			}
+
+			// Direct zoom calculation without momentum
+			const scaleFactor = Math.exp(-delta * 0.005);
+			const newScale = oldScale * scaleFactor;
 
 			// Clamp scale
 			scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
@@ -256,10 +312,27 @@
 
 			stageX = newPos.x;
 			stageY = newPos.y;
+			updateGridLines(); // Update grid after zoom
 		} else {
 			// Pan behavior (two-finger scroll on trackpad)
-			stageX -= e.evt.deltaX;
-			stageY -= e.evt.deltaY;
+			let deltaX = e.evt.deltaX;
+			let deltaY = e.evt.deltaY;
+
+			// Normalize for different delta modes
+			if (e.evt.deltaMode === 1) {
+				// DOM_DELTA_LINE - multiply by line height
+				deltaX *= 20;
+				deltaY *= 20;
+			} else if (e.evt.deltaMode === 2) {
+				// DOM_DELTA_PAGE
+				deltaX *= 100;
+				deltaY *= 100;
+			}
+
+			// Direct pan without smoothing - stop immediately
+			stageX -= deltaX;
+			stageY -= deltaY;
+			updateGridLines(); // Update grid after pan
 		}
 	}
 
@@ -291,6 +364,21 @@
 		stageY = 0;
 	}
 
+	function handleKeyDown(e) {
+		// Ignore if typing in an input field
+		if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+		const key = e.key.toLowerCase();
+		
+		if (key === 'v') {
+			e.preventDefault();
+			activeTool = 'cursor';
+		} else if (key === 'h') {
+			e.preventDefault();
+			activeTool = 'hand';
+		}
+	}
+
 	onMount(() => {
 		// Initialize stage size with actual window dimensions
 		stageConfig.width = window.innerWidth;
@@ -298,9 +386,12 @@
 		
 		loadHistoryFromStorage();
 		window.addEventListener('resize', handleResize);
+		window.addEventListener('keydown', handleKeyDown);
+		updateGridLines(); // Initial grid calculation
 
 		return () => {
 			window.removeEventListener('resize', handleResize);
+			window.removeEventListener('keydown', handleKeyDown);
 		};
 	});
 </script>
@@ -335,6 +426,24 @@
 			ontouchend={handleMouseUp}
 		>
 			<Layer>
+				<!-- Grid lines in background -->
+				{#each cachedGridLines.vertical as line}
+					<Line
+						points={line}
+						stroke={GRID_COLOR}
+						strokeWidth={GRID_STROKE_WIDTH / scale}
+						listening={false}
+					/>
+				{/each}
+				{#each cachedGridLines.horizontal as line}
+					<Line
+						points={line}
+						stroke={GRID_COLOR}
+						strokeWidth={GRID_STROKE_WIDTH / scale}
+						listening={false}
+					/>
+				{/each}
+
 				<!-- Render arrows first so they appear behind nodes -->
 				{#each connectors as connector (connector.id)}
 					{#if connector.points}
@@ -435,17 +544,17 @@
 					class="tool-button"
 					class:active={activeTool === 'cursor'}
 					onclick={() => (activeTool = 'cursor')}
-					title="Cursor Tool - Select and move nodes"
+					title="Cursor Tool (V) - Select and move nodes"
 				>
-					<img src="{base}/assets/toolbelt-icons/cursor-tool.svg" alt="Cursor Tool" />
+					<span class="tool-letter">V</span>
 				</button>
 				<button
 					class="tool-button"
 					class:active={activeTool === 'hand'}
 					onclick={() => (activeTool = 'hand')}
-					title="Hand Tool - Pan canvas"
+					title="Hand Tool (H) - Pan canvas"
 				>
-					<img src="{base}/assets/toolbelt-icons/hand-tool.svg" alt="Hand Tool" />
+					<span class="tool-letter">H</span>
 				</button>
 			</div>
 		{:else}
@@ -464,6 +573,9 @@
 		background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
 		position: relative;
 		cursor: default;
+		/* Disable browser smooth scrolling */
+		touch-action: none;
+		overscroll-behavior: none;
 	}
 
 	.empty-state {
@@ -521,22 +633,23 @@
 		cursor: pointer;
 		transition: all 0.2s ease;
 		padding: 0;
+		position: relative;
 	}
 
-	.tool-button img {
-		width: 24px;
-		height: 24px;
-		filter: invert(1);
-		opacity: 0.6;
-		transition: opacity 0.2s ease;
+	.tool-letter {
+		font-size: 18px;
+		font-weight: 600;
+		color: rgba(255, 255, 255, 0.6);
+		transition: color 0.2s ease;
+		user-select: none;
 	}
 
 	.tool-button:hover {
 		background: rgba(255, 255, 255, 0.05);
 	}
 
-	.tool-button:hover img {
-		opacity: 0.9;
+	.tool-button:hover .tool-letter {
+		color: rgba(255, 255, 255, 0.9);
 	}
 
 	.tool-button.active {
@@ -544,9 +657,8 @@
 		border-color: var(--color-accent);
 	}
 
-	.tool-button.active img {
-		opacity: 1;
-		filter: invert(1) sepia(1) saturate(5) hue-rotate(340deg);
+	.tool-button.active .tool-letter {
+		color: var(--color-accent);
 	}
 
 	/* Change cursor based on active tool */
