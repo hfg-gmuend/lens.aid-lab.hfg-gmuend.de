@@ -1,0 +1,100 @@
+{
+	"categories": [
+		{
+			"id": "futuristic",
+			"name": "Futuristic",
+			"prompts": [
+				"futuristic cyberpunk city with neon lights",
+				"advanced technology and flying vehicles",
+				"sustainable eco-friendly future with green architecture",
+				"space colony with transparent domes",
+				"holographic interfaces and AR overlays",
+				"clean energy infrastructure with solar panels and wind turbines"
+			]
+		},
+		{
+			"id": "dystopian",
+			"name": "Dystopian",
+			"prompts": [
+				"post-apocalyptic wasteland with abandoned buildings",
+				"polluted cityscape with smog and industrial decay",
+				"overgrown ruins reclaimed by nature",
+				"climate change aftermath with flooded streets",
+				"surveillance state with cameras everywhere",
+				"resource scarcity and drought conditions"
+			]
+		},
+		{
+			"id": "utopian",
+			"name": "Utopian",
+			"prompts": [
+				"harmonious integration of nature and technology",
+				"peaceful community with abundant green spaces",
+				"vertical gardens and urban farming",
+				"clean waterways and thriving wildlife",
+				"pedestrian-friendly streets with no cars",
+				"community gathering spaces and public art"
+			]
+		},
+		{
+			"id": "nature",
+			"name": "Nature Transformed",
+			"prompts": [
+				"wildflowers and meadows covering urban areas",
+				"forest canopy growing over streets",
+				"crystal clear rivers running through the city",
+				"wildlife roaming freely in green corridors",
+				"bioluminescent plants lighting the streets",
+				"coral reefs in underwater city sections"
+			]
+		},
+		{
+			"id": "climate",
+			"name": "Climate Change",
+			"prompts": [
+				"rising sea levels and coastal flooding",
+				"extreme heat and drought conditions",
+				"intense storms and weather events",
+				"melting glaciers and ice sheets",
+				"adapted architecture for new climate",
+				"climate refugees and mass migration"
+			]
+		},
+		{
+			"id": "technological",
+			"name": "Technological",
+			"prompts": [
+				"AI-powered smart city infrastructure",
+				"autonomous vehicles and drone delivery",
+				"renewable energy grids and battery storage",
+				"3D-printed buildings and structures",
+				"quantum computing facilities",
+				"neural interface integration"
+			]
+		},
+		{
+			"id": "social",
+			"name": "Social Change",
+			"prompts": [
+				"diverse community celebration and cultural fusion",
+				"equitable housing and mixed-income neighborhoods",
+				"accessible design for all abilities",
+				"intergenerational community spaces",
+				"local food production and farmers markets",
+				"collaborative workspaces and maker labs"
+			]
+		},
+		{
+			"id": "artistic",
+			"name": "Artistic Vision",
+			"prompts": [
+				"surrealist dreamscape with floating objects",
+				"vibrant street art and murals everywhere",
+				"kinetic sculptures and interactive installations",
+				"illuminated architecture with projection mapping",
+				"geometric patterns and sacred geometry",
+				"organic flowing architecture inspired by nature"
+			]
+		}
+	]
+}

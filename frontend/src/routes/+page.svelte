@@ -6,16 +6,34 @@
 	import ControlBar from '$lib/components/ControlBar.svelte';
 	import History from '$lib/components/History.svelte';
 	import PanelControls from '$lib/components/PanelControls.svelte';
+	import PromptLibrary from '$lib/components/PromptLibrary.svelte';
+	import ImageComparison from '$lib/components/ImageComparison.svelte';
 	import refresh from '$lib/assets/icons/refresh.svg?raw';
+	import compare from '$lib/assets/icons/compare.svg?raw';
+
+	import { notifySuccess, notifyError, notifyWarning, notifyInfo } from '$lib/stores/notifications.js';
+	import { promptHistory } from '$lib/stores/prompts.js';
+	import { settings } from '$lib/stores/settings.js';
+	import { historyDB } from '$lib/db/historyDB.js';
+	import { storageMonitor } from '$lib/stores/storageMonitor.js';
+	import { validatePrompt, sanitizePrompt } from '$lib/utils/validation.js';
+	import { validateImage, compressImage } from '$lib/utils/imageUtils.js';
+	import { uploadImage, checkConnectivity } from '$lib/api/client.js';
+	import { initNetworkMonitor } from '$lib/utils/network.js';
+	import { cacheImage, getCachedImage, preloadImage } from '$lib/utils/cache.js';
 
 	const API_URL = 'https://api-h34hnr2j2nm2me2d.transferscope.org/';
 	const CLIENT_ID = 'web';
-	const HISTORY_KEY = 'futures-lens-history';
-	const MAX_HISTORY = 20;
 
 	let promptValue = $state('');
-	let denoise = $state(0.85); // 0.4-1.0 range, default 0.85
+	let denoise = $state($settings.denoise); // 0.4-1.0 range, loaded from settings
 	let seed = $state(-1);
+
+	// UI State
+	let showPromptLibrary = $state(false);
+	let showComparison = $state(false);
+	let loadingProgress = $state({ stage: '', progress: 0 });
+	let inputImageUrl = $state(null);
 
 	let canvasElement = $state(null);
 	let videoElement = $state(null);
@@ -26,10 +44,25 @@
 	let cameraActive = $state(false);
 	let loading = $state(false);
 	let loopFrame = $state(null);
-	let history = $state([]);
-	let historyViewMode = $state('grid'); // 'grid' or 'large'
-	let historyGroupMode = $state('grouped'); // 'grouped' or 'standard'
+	let historyViewMode = $state($settings.historyViewMode); // 'grid' or 'large'
+	let historyGroupMode = $state($settings.historyGroupMode); // 'grouped' or 'standard'
 	let currentInputHash = $state(null); // Track hash of current canvas content
+	
+	// Store the last transformation data for manual save
+	let lastTransformData = $state(null);
+
+	// Persist settings when they change
+	$effect(() => {
+		settings.updateSetting('denoise', denoise);
+	});
+
+	$effect(() => {
+		settings.updateSetting('historyViewMode', historyViewMode);
+	});
+
+	$effect(() => {
+		settings.updateSetting('historyGroupMode', historyGroupMode);
+	});
 
 	const CANVAS_SIZE = 1024;
 
@@ -68,6 +101,7 @@
 	async function handleCamera() {
 		if (cameraActive) {
 			stopCamera();
+			notifyInfo('Camera stopped');
 			return;
 		}
 
@@ -84,9 +118,10 @@
 			videoElement.play();
 			cameraActive = true;
 			startLoop();
+			notifySuccess('Camera activated');
 		} catch (error) {
 			console.error('Error accessing camera:', error);
-			alert('Failed to access camera. Please check permissions.');
+			notifyError('Failed to access camera. Please check permissions.');
 		}
 	}
 
@@ -116,7 +151,7 @@
 		}
 	}
 
-	// Upload image
+	// Upload image with validation and compression
 	function handleUpload() {
 		stopCamera();
 		const input = document.createElement('input');
@@ -126,43 +161,82 @@
 			const file = e.target.files?.[0];
 			if (!file) return;
 
-			const reader = new FileReader();
-			reader.onload = (e) => {
-				const image = new Image();
-				image.src = e.target.result;
-				image.onload = async () => {
-					if (!context) return;
+			// Validate image
+			const validation = validateImage(file);
+			if (!validation.valid) {
+				notifyError(validation.error);
+				return;
+			}
 
-					// Calculate aspect ratio fit
-					const aspectRatio = image.width / image.height;
-					let drawWidth, drawHeight, offsetX, offsetY;
+			try {
+				notifyInfo('Processing image...');
 
-					if (aspectRatio > 1) {
-						drawWidth = CANVAS_SIZE * aspectRatio;
-						drawHeight = CANVAS_SIZE;
-						offsetX = (CANVAS_SIZE - drawWidth) / 2;
-						offsetY = 0;
-					} else {
-						drawWidth = CANVAS_SIZE;
-						drawHeight = CANVAS_SIZE / aspectRatio;
-						offsetX = 0;
-						offsetY = (CANVAS_SIZE - drawHeight) / 2;
-					}
+				// Compress image if needed
+				let processedFile = file;
+				if (file.size > 2 * 1024 * 1024) {
+					// Compress files larger than 2MB
+					notifyInfo('Compressing image...');
+					processedFile = await compressImage(file, CANVAS_SIZE, CANVAS_SIZE, 0.85);
+				}
 
-					context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-					context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
-					// Update the current input hash after loading new content
-					currentInputHash = await generateInputImageHash();
+				const reader = new FileReader();
+				reader.onload = (e) => {
+					const image = new Image();
+					image.src = e.target.result;
+					image.onload = async () => {
+						if (!context) return;
+
+						// Calculate aspect ratio fit
+						const aspectRatio = image.width / image.height;
+						let drawWidth, drawHeight, offsetX, offsetY;
+
+						if (aspectRatio > 1) {
+							drawWidth = CANVAS_SIZE * aspectRatio;
+							drawHeight = CANVAS_SIZE;
+							offsetX = (CANVAS_SIZE - drawWidth) / 2;
+							offsetY = 0;
+						} else {
+							drawWidth = CANVAS_SIZE;
+							drawHeight = CANVAS_SIZE / aspectRatio;
+							offsetX = 0;
+							offsetY = (CANVAS_SIZE - drawHeight) / 2;
+						}
+
+						context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+						context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+
+						// Update the current input hash after loading new content
+						currentInputHash = await generateInputImageHash();
+
+						notifySuccess('Image loaded successfully');
+					};
 				};
-			};
-			reader.readAsDataURL(file);
+				reader.readAsDataURL(processedFile);
+			} catch (error) {
+				console.error('Error processing image:', error);
+				notifyError('Failed to process image. Please try again.');
+			}
 		};
 		input.click();
 	}
 
-	// Transfer - send canvas to API
+	// Transfer - send canvas to API with validation and error handling
 	async function handleTransfer() {
 		if (loading || !canvasElement) return;
+
+		// Validate prompt
+		const promptValidation = validatePrompt(promptValue);
+		if (!promptValidation.valid) {
+			notifyError(promptValidation.error);
+			return;
+		}
+
+		// Check network connectivity
+		const isOnline = await checkConnectivity();
+		if (!isOnline) {
+			notifyError('No network connection. Please check your internet and try again.');
+			return;
+		}
 
 		// Freeze camera if active
 		if (cameraActive) {
@@ -174,66 +248,112 @@
 		if (!inputHash) {
 			inputHash = await generateInputImageHash();
 			if (!inputHash) {
-				alert('Failed to process image. Please try again.');
+				notifyError('Failed to process image. Please try again.');
 				return;
 			}
 		}
 
 		loading = true;
+		loadingProgress = { stage: 'preparing', progress: 10 };
 
 		try {
+			// Sanitize prompt
+			const cleanPrompt = sanitizePrompt(promptValue);
+
 			// Get image from canvas
+			loadingProgress = { stage: 'preparing', progress: 20 };
 			const imageBlob = await new Promise((resolve) => {
 				canvasElement.toBlob(resolve, 'image/jpeg', 0.8);
 			});
 
-			// Prepare form data
-			const formData = new FormData();
-			formData.append('file', imageBlob);
-
 			// Build query params
-			const params = new URLSearchParams({
+			const params = {
 				client_id: CLIENT_ID,
-				text: promptValue,
+				text: cleanPrompt,
 				seed: '-1',
 				denoise: denoise.toString(),
 				redirect: 'true'
-			});
+			};
 
-			// Send to API
-			const response = await fetch(`${API_URL}lens?${params.toString()}`, {
-				mode: 'cors',
-				method: 'POST',
-				body: formData,
-				credentials: 'include'
-			});
+			// Upload with retry logic
+			const data = await uploadImage(
+				API_URL,
+				imageBlob,
+				params,
+				(progress) => {
+					loadingProgress = progress;
 
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
-			}
-
-			// Parse JSON response
-			const data = await response.json();
+					if (progress.stage === 'retrying') {
+						notifyWarning(`Network error. Retrying... (Attempt ${progress.attempt})`);
+					}
+				},
+				(attempt, error, delay) => {
+					console.log(`Retry attempt ${attempt} after ${delay}ms`, error);
+				}
+			);
 
 			// Construct full URLs from paths (remove leading slash to avoid double slashes)
 			const outputUrl = API_URL + data.output.replace(/^\//, '');
 			const inputUrl = API_URL + data.input.replace(/^\//, '');
 
+			// Cache images for faster loading
+			preloadImage(outputUrl).catch(console.warn);
+			preloadImage(inputUrl).catch(console.warn);
+
 			// Display result
 			resultImage = outputUrl;
+			inputImageUrl = inputUrl;
 
-			// Save to history with actual values from API and our input hash
-			await saveToHistory(inputHash, inputUrl, outputUrl, data.prompt, data.denoise, data.seed);
+			// Store transformation data for later save (when user clicks check button)
+			lastTransformData = {
+				inputHash,
+				inputUrl,
+				outputUrl,
+				prompt: data.prompt,
+				denoise: data.denoise,
+				seed: data.seed
+			};
+
+			// Add to prompt history
+			promptHistory.add(cleanPrompt);
+
+			notifySuccess('Image transformed successfully! Click the check button to save to history.');
 		} catch (error) {
 			console.error('Error transferring image:', error);
-			alert('Failed to transfer image. Please try again.');
+			notifyError(error.message || 'Failed to transform image. Please try again.');
 		} finally {
 			loading = false;
+			loadingProgress = { stage: '', progress: 0 };
 		}
 	}
 
-	// Reuse - copy right panel to left canvas
-	function handleReuse() {
+	// Save to history only (check button)
+	async function handleSaveToHistory() {
+		if (!lastTransformData) {
+			notifyWarning('No image to save');
+			return;
+		}
+
+		try {
+			await historyDB.add(
+				lastTransformData.inputHash,
+				lastTransformData.inputUrl,
+				lastTransformData.outputUrl,
+				lastTransformData.prompt,
+				lastTransformData.denoise,
+				lastTransformData.seed
+			);
+			
+			notifySuccess('Saved to history');
+			lastTransformData = null; // Clear after saving
+		} catch (error) {
+			console.error('Failed to save to history:', error);
+			notifyError('Failed to save to history');
+		}
+	}
+
+	// Reuse - copy right panel to left canvas (top handle)
+	async function handleReuse() {
 		if (!resultImage || !context) return;
 
 		stopCamera();
@@ -246,73 +366,59 @@
 			context.drawImage(image, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
 			// Update the current input hash after loading new content to canvas
 			currentInputHash = await generateInputImageHash();
+			notifySuccess('Image copied to input');
 		};
 	}
 
 	// Download result image
-	function handleDownload() {
+	async function handleDownload() {
 		if (!resultImage) return;
 
-		const link = document.createElement('a');
-		link.href = resultImage;
-		const filename = promptValue
-			? `futures-lens-${promptValue.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`
-			: 'futures-lens.jpg';
-		link.download = filename;
-		link.click();
-	}
-
-	// History management
-	async function saveToHistory(
-		inputHash,
-		inputImageUrl,
-		resultImageUrl,
-		prompt,
-		denoiseVal,
-		seedVal
-	) {
-		const variation = {
-			id: Date.now(),
-			timestamp: new Date().toISOString(),
-			resultImage: resultImageUrl,
-			prompt,
-			denoise: denoiseVal,
-			seed: seedVal
-		};
-
-		// Check if we already have a group with this input hash
-		const existingGroupIndex = history.findIndex((group) => group.inputHash === inputHash);
-
-		if (existingGroupIndex !== -1) {
-			// Add to existing group, but update the inputImage URL to the latest one
-			history[existingGroupIndex].variations = [
-				variation,
-				...history[existingGroupIndex].variations
-			];
-			history[existingGroupIndex].timestamp = new Date().toISOString(); // Update group timestamp
-			history[existingGroupIndex].inputImage = inputImageUrl; // Update to latest URL
-		} else {
-			// Create new group
-			const newGroup = {
-				id: Date.now(),
-				timestamp: new Date().toISOString(),
-				inputHash: inputHash,
-				inputImage: inputImageUrl,
-				variations: [variation]
-			};
-			history = [newGroup, ...history];
-		}
-
-		// Limit total groups
-		history = history.slice(0, MAX_HISTORY);
-
-		// Save to localStorage
 		try {
-			localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+			// Fetch the image and create a blob to avoid CORS issues
+			const response = await fetch(resultImage);
+			const blob = await response.blob();
+			const url = URL.createObjectURL(blob);
+			
+			const link = document.createElement('a');
+			link.href = url;
+			const filename = promptValue
+				? `futures-lens-${promptValue.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`
+				: 'futures-lens.jpg';
+			link.download = filename;
+			link.click();
+			
+			// Clean up the blob URL
+			setTimeout(() => URL.revokeObjectURL(url), 100);
+			
+			notifySuccess('Image downloaded');
 		} catch (error) {
-			console.error('Failed to save history to localStorage:', error);
+			console.error('Error downloading image:', error);
+			notifyError('Failed to download image');
 		}
 	}
+
+	// Open prompt library
+	function handleOpenLibrary() {
+		showPromptLibrary = true;
+	}
+
+	// Select prompt from library
+	function handleSelectPrompt(prompt) {
+		promptValue = prompt;
+		notifySuccess('Prompt selected');
+	}
+
+	// Open comparison view
+	function handleComparison() {
+		if (!inputImageUrl || !resultImage) {
+			notifyWarning('Please generate an image first');
+			return;
+		}
+		showComparison = true;
+	}
+
+	// History management - now handled by historyDB store
 
 	function loadFromHistory(item) {
 		if (!context) return;
@@ -343,111 +449,37 @@
 		seed = item.seed;
 	}
 
-	function loadHistoryFromStorage() {
-		try {
-			const stored = localStorage.getItem(HISTORY_KEY);
-			if (stored) {
-				const parsed = JSON.parse(stored);
-				// Migrate old format to new format if needed
-				history = migrateHistoryFormat(parsed);
-			}
-		} catch (error) {
-			console.error('Failed to load history from localStorage:', error);
-			history = [];
-		}
+	// History deletion handlers
+	async function deleteHistoryItem(itemId) {
+		await historyDB.removeVariation(itemId);
 	}
 
-	// Migrate old history format to new grouped format
-	function migrateHistoryFormat(data) {
-		if (!data || data.length === 0) return [];
-
-		// Check if data is already in new format
-		if (data[0].variations) {
-			// Ensure all groups have an inputHash (for data saved before hash implementation)
-			return data.map((group) => {
-				if (!group.inputHash) {
-					// Use inputImage URL as fallback hash for old grouped data
-					group.inputHash = 'legacy_' + btoa(group.inputImage).substring(0, 16);
-				}
-				return group;
-			});
-		}
-
-		// Convert old format to new format
-		// Group by inputImage URL since we don't have hash for old data
-		const groups = {};
-
-		data.forEach((item) => {
-			const inputImage = item.inputImage;
-			const fallbackHash = 'legacy_' + btoa(inputImage).substring(0, 16);
-
-			if (!groups[fallbackHash]) {
-				groups[fallbackHash] = {
-					id: item.id,
-					timestamp: item.timestamp,
-					inputHash: fallbackHash,
-					inputImage: inputImage,
-					variations: []
-				};
-			}
-
-			groups[fallbackHash].variations.push({
-				id: item.id,
-				timestamp: item.timestamp,
-				resultImage: item.resultImage,
-				prompt: item.prompt,
-				denoise: item.denoise,
-				seed: item.seed
-			});
-		});
-
-		return Object.values(groups);
+	async function deleteHistoryGroup(inputHash) {
+		await historyDB.removeGroup(inputHash);
 	}
 
-	function clearHistory() {
-		history = [];
-		try {
-			localStorage.removeItem(HISTORY_KEY);
-		} catch (error) {
-			console.error('Failed to clear history:', error);
-		}
+	async function clearHistory() {
+		await historyDB.clear();
 	}
 
-	function deleteHistoryItem(itemId) {
-		history = history
-			.map((group) => {
-				// Remove variation from group
-				const updatedVariations = group.variations.filter((v) => v.id !== itemId);
-
-				// If group has no variations left, it will be filtered out below
-				return {
-					...group,
-					variations: updatedVariations
-				};
-			})
-			.filter((group) => group.variations.length > 0); // Remove empty groups
-
-		try {
-			localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-		} catch (error) {
-			console.error('Failed to update history:', error);
-		}
-	}
-
-	function deleteHistoryGroup(groupId) {
-		history = history.filter((group) => group.id !== groupId);
-		try {
-			localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-		} catch (error) {
-			console.error('Failed to update history:', error);
-		}
-	}
-
-	onMount(() => {
+	onMount(async () => {
 		if (canvasElement) {
 			context = canvasElement.getContext('2d', { willReadFrequently: true });
 		}
-		loadHistoryFromStorage();
+
+		// Initialize IndexedDB history store
+		await historyDB.init();
+
+		// Start storage monitoring
+		storageMonitor.start();
+
+		// Setup network monitoring
+		const cleanupNetwork = initNetworkMonitor();
+
+		return () => {
+			cleanupNetwork();
+			storageMonitor.stop();
+		};
 	});
 
 	onDestroy(() => {
@@ -461,7 +493,6 @@
 	<div class="header">
 		<h1 class="title">futures lens</h1>
 		<div class="header-links">
-			<a href="{base}/canvas" class="about-link">Canvas</a>
 			<a href="{base}/about" class="about-link">About</a>
 		</div>
 	</div>
@@ -478,10 +509,16 @@
 	></video>
 
 	<!-- Main viewport with split-screen -->
-	<div class="main-viewport">
+	<div class="main-viewport" role="main" aria-label="Image transformation interface">
 		<!-- Left Panel (Input) -->
-		<div class="panel panel-left">
-			<canvas bind:this={canvasElement} width={CANVAS_SIZE} height={CANVAS_SIZE} class="canvas">
+		<div class="panel panel-left" aria-label="Input image panel">
+			<canvas
+				bind:this={canvasElement}
+				width={CANVAS_SIZE}
+				height={CANVAS_SIZE}
+				class="canvas"
+				aria-label="Input image canvas"
+			>
 			</canvas>
 
 			<PanelControls
@@ -493,13 +530,31 @@
 		</div>
 
 		<!-- Right Panel (Output) -->
-		<div class="panel panel-right">
+		<div class="panel panel-right" aria-label="Output image panel">
 			{#if loading}
-				<div class="loading-indicator">
+				<div class="loading-indicator" role="status" aria-live="polite">
 					<Icon src={refresh} size={48} class="spin" />
+					<div class="loading-text">
+						{#if loadingProgress.stage === 'preparing'}
+							<p>Preparing image...</p>
+						{:else if loadingProgress.stage === 'uploading'}
+							<p>Generating...</p>
+						{:else if loadingProgress.stage === 'requesting'}
+							<p>Generating...</p>
+						{:else if loadingProgress.stage === 'retrying'}
+							<p>Retrying connection...</p>
+						{:else}
+							<p>Generating...</p>
+						{/if}
+						{#if loadingProgress.progress > 0}
+							<div class="progress-bar">
+								<div class="progress-fill" style="width: {loadingProgress.progress}%"></div>
+							</div>
+						{/if}
+					</div>
 				</div>
 			{:else if resultImage}
-				<img src={resultImage} alt="Result" class="result-image" />
+				<img src={resultImage} alt="Transformed future vision" class="result-image" />
 			{:else}
 				<div class="empty-state">
 					<p>Click transfer to generate</p>
@@ -508,9 +563,9 @@
 
 			<PanelControls
 				position="bottom-right"
-				checkDisabled={!resultImage}
+				checkDisabled={!lastTransformData}
 				downloadDisabled={!resultImage}
-				onCheck={handleReuse}
+				onCheck={handleSaveToHistory}
 				onDownload={handleDownload}
 			/>
 		</div>
@@ -520,11 +575,10 @@
 	</div>
 
 	<!-- Bottom control bar -->
-	<ControlBar bind:promptValue bind:denoise />
+	<ControlBar bind:promptValue bind:denoise onOpenLibrary={handleOpenLibrary} />
 
 	<!-- History Section -->
 	<History
-		{history}
 		bind:viewMode={historyViewMode}
 		bind:groupMode={historyGroupMode}
 		onLoadItem={loadFromHistory}
@@ -533,6 +587,23 @@
 		onClearHistory={clearHistory}
 	/>
 </div>
+
+<!-- Prompt Library Modal -->
+{#if showPromptLibrary}
+	<PromptLibrary
+		onSelectPrompt={handleSelectPrompt}
+		onClose={() => (showPromptLibrary = false)}
+	/>
+{/if}
+
+<!-- Image Comparison Modal -->
+{#if showComparison && inputImageUrl && resultImage}
+	<ImageComparison
+		inputImage={inputImageUrl}
+		outputImage={resultImage}
+		onClose={() => (showComparison = false)}
+	/>
+{/if}
 
 <style>
 	.page-container {
@@ -547,7 +618,7 @@
 
 	.header {
 		width: 100%;
-		max-width: 1400px;
+		max-width: 1200px;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -590,7 +661,7 @@
 	.main-viewport {
 		position: relative;
 		width: 100%;
-		max-width: 1400px;
+		max-width: 1200px;
 		border-radius: 1.5rem;
 		overflow: hidden;
 		display: flex;
@@ -633,8 +704,10 @@
 
 	.loading-indicator {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
+		gap: 1.5rem;
 		color: var(--color-accent);
 	}
 
@@ -649,6 +722,32 @@
 		to {
 			transform: rotate(360deg);
 		}
+	}
+
+	.loading-text {
+		text-align: center;
+		min-width: 200px;
+	}
+
+	.loading-text p {
+		margin: 0 0 0.75rem 0;
+		color: rgba(255, 255, 255, 0.9);
+		font-size: 1rem;
+	}
+
+	.progress-bar {
+		width: 200px;
+		height: 6px;
+		background: rgba(255, 255, 255, 0.1);
+		border-radius: 3px;
+		overflow: hidden;
+	}
+
+	.progress-fill {
+		height: 100%;
+		background: var(--color-accent);
+		transition: width 0.3s ease;
+		border-radius: 3px;
 	}
 
 	.empty-state {

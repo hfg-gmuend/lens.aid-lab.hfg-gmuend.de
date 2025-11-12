@@ -1,12 +1,17 @@
 <script>
+	import { base } from '$app/paths';
 	import Icon from './Icon.svelte';
 	import HistoryGroup from './HistoryGroup.svelte';
 	import grid from '$lib/assets/icons/grid.svg?raw';
 	import rows from '$lib/assets/icons/rows.svg?raw';
 	import close from '$lib/assets/icons/close.svg?raw';
+	import download from '$lib/assets/icons/download.svg?raw';
+	import { historyDB } from '$lib/db/historyDB.js';
+	import { exportHistoryAsJSON, formatBytes, calculateHistorySize } from '$lib/utils/export.js';
+	import { notifySuccess, notifyError } from '$lib/stores/notifications.js';
+	import { lazyload } from '$lib/utils/lazyload.js';
 
 	let {
-		history,
 		onLoadItem,
 		onDeleteItem,
 		onDeleteGroup,
@@ -28,8 +33,31 @@
 		onDeleteItem(item.id);
 	}
 
+	async function handleExport() {
+		try {
+			const data = await historyDB.export();
+			if (!data) {
+				notifyError('No history to export');
+				return;
+			}
+
+			const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = `futures-lens-history-${new Date().toISOString().split('T')[0]}.json`;
+			link.click();
+			URL.revokeObjectURL(url);
+
+			notifySuccess(`History exported (${data.totalVariations} items)`);
+		} catch (error) {
+			console.error('Failed to export history:', error);
+			notifyError('Failed to export history');
+		}
+	}
+
 	// Convert grouped data to flat list for standard view
-	function getFlatHistory(groupedHistory) {
+	function getFlatHistory(groupedHistory = []) {
 		const flat = [];
 		groupedHistory.forEach((group) => {
 			group.variations.forEach((variation) => {
@@ -47,14 +75,15 @@
 		return flat.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 	}
 
-	let displayHistory = $derived(groupMode === 'standard' ? getFlatHistory(history) : history);
+	let displayHistory = $derived(groupMode === 'standard' ? getFlatHistory($historyDB) : $historyDB);
 </script>
 
-{#if history.length > 0}
+{#if $historyDB.length > 0}
 	<div class="history-section">
 		<div class="history-header">
 			<h2 class="history-title">History</h2>
 			<div class="history-controls">
+				<a href="{base}/canvas" class="history-toggle">Canvas</a>
 				<button class="history-toggle" onclick={toggleGroupMode} aria-label="Toggle grouped view">
 					{groupMode === 'grouped' ? 'Standard' : 'Grouped'}
 				</button>
@@ -65,12 +94,15 @@
 				>
 					<Icon src={viewMode === 'grid' ? rows : grid} size={20} />
 				</button>
+				<button class="history-toggle" onclick={handleExport} aria-label="Export history">
+					<Icon src={download} size={20} />
+				</button>
 				<button class="history-clear" onclick={onClearHistory}>Clear All</button>
 			</div>
 		</div>
 		<div class="history-grid" class:large-view={viewMode === 'large'}>
 			{#if groupMode === 'grouped'}
-				{#each displayHistory as group (group.id)}
+				{#each displayHistory as group (group.inputHash)}
 					<HistoryGroup
 						{group}
 						{onLoadItem}
@@ -98,9 +130,9 @@
 							<Icon src={close} size={16} />
 						</div>
 						<div class="history-images">
-							<img src={item.inputImage} alt="Input" class="history-image history-input" />
+							<img use:lazyload={item.inputImage} alt="Input" class="history-image history-input" />
 							<div class="history-arrow">→</div>
-							<img src={item.resultImage} alt="Result" class="history-image history-result" />
+							<img use:lazyload={item.resultImage} alt="Result" class="history-image history-result" />
 						</div>
 						<div class="history-info">
 							<p class="history-prompt">{item.prompt}</p>
@@ -118,7 +150,7 @@
 <style>
 	.history-section {
 		width: 100%;
-		max-width: 1400px;
+		max-width: 1200px;
 		margin-top: 2rem;
 	}
 
