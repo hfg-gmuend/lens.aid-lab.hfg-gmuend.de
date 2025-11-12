@@ -10,7 +10,7 @@ let idCounter = 0;
  * @param {string} type - The type of notification: 'success', 'error', 'warning', 'info'
  * @param {number} duration - How long to show the notification in ms (0 = permanent)
  */
-export function addNotification(message, type = 'info', duration = 5000) {
+export function addNotification(message, type = 'info', duration = 1000) {
 	const id = idCounter++;
 	const notification = { id, message, type, duration };
 
@@ -43,18 +43,18 @@ export function clearAllNotifications() {
 /**
  * Convenience methods
  */
-export function notifySuccess(message, duration = 5000) {
+export function notifySuccess(message, duration = 1000) {
 	return addNotification(message, 'success', duration);
 }
 
-export function notifyError(message, duration = 7000) {
+export function notifyError(message, duration = 4000) {
 	return addNotification(message, 'error', duration);
 }
 
-export function notifyWarning(message, duration = 6000) {
+export function notifyWarning(message, duration = 3500) {
 	return addNotification(message, 'warning', duration);
 }
 
-export function notifyInfo(message, duration = 5000) {
+export function notifyInfo(message, duration = 1000) {
 	return addNotification(message, 'info', duration);
 }
