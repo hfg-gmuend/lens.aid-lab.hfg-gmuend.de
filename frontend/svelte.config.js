@@ -12,6 +12,15 @@ const config = {
 		}),
 		paths: {
 			base: dev ? '' : process.env.BASE_PATH || ''
+		},
+		prerender: {
+			handleHttpError: ({ path, referrer, message }) => {
+				// Ignore 404s for manifest.json since we don't have a PWA manifest yet
+				if (path === '/manifest.json') {
+					return;
+				}
+				throw new Error(message);
+			}
 		}
 	}
 };
