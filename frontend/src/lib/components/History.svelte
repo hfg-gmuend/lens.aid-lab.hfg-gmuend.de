@@ -83,7 +83,7 @@
 		<div class="history-header">
 			<h2 class="history-title">History</h2>
 			<div class="history-controls">
-				<a href="{base}/canvas" class="history-toggle">Canvas</a>
+				<!-- <a href="{base}/canvas" class="history-toggle">Canvas</a> -->
 				<button class="history-toggle" onclick={toggleGroupMode} aria-label="Toggle grouped view">
 					{groupMode === 'grouped' ? 'Standard' : 'Grouped'}
 				</button>

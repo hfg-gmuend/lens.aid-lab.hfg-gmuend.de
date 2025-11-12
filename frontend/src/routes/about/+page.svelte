@@ -11,13 +11,7 @@
 	<div class="about-content">
 		<div class="about-text">
 			<p>
-				Futures Lens is an interactive tool for exploring and generating future scenarios through
-				AI-powered image transformation.
-			</p>
-
-			<p>
-				Capture or upload an image, provide a prompt describing a potential future, and watch as the
-				AI transforms your vision into a visual representation of what might be.
+				Can AI speculate? Explore how AI can be integrated into the design process to decontextualize and redefine everyday objects through constraints. We will collect and visualize our imaginary designs in the “Catalog of Fantastic Things.”
 			</p>
 
 			<h2>How to Use</h2>
@@ -42,13 +36,17 @@
 				</li>
 			</ol>
 
-			<h2>Tips</h2>
-			<ul>
-				<li>Be specific and descriptive in your prompts for better results.</li>
-				<li>Lower familiarity values create more dramatic transformations.</li>
-				<li>Higher familiarity values keep the result closer to the original.</li>
-				<li>Use the history feature to compare different variations..</li>
-			</ul>
+			<div class="credit-section">
+				<p>
+					<strong>Credits:</strong> Futures Lens was created by Jordi Trost and Christopher Pietsch @
+					<a href="https://aid-lab.hfg-gmuend.de/" target="_blank" rel="noopener noreferrer">AI Design Lab</a>.
+				</p>
+				<p>
+					Built with
+					<a href="https://kit.svelte.dev" target="_blank" rel="noopener noreferrer">SvelteKit</a>,
+					<a href="https://fastapi.tiangolo.com" target="_blank" rel="noopener noreferrer">FastAPI</a>, and
+					<a href="https://comfyui.com" target="_blank" rel="noopener noreferrer">ComfyUI</a>.
+				</p>
 		</div>
 	</div>
 </div>
@@ -56,6 +54,7 @@
 <style>
 	.about-container {
 		width: 100%;
+		max-width: 1200px;
 		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
@@ -66,7 +65,6 @@
 
 	.about-content {
 		width: 100%;
-		max-width: 800px;
 	}
 
 	.header {
