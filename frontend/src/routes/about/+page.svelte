@@ -47,6 +47,7 @@
 					<a href="https://fastapi.tiangolo.com" target="_blank" rel="noopener noreferrer">FastAPI</a>, and
 					<a href="https://comfyui.com" target="_blank" rel="noopener noreferrer">ComfyUI</a>.
 				</p>
+			</div>
 		</div>
 	</div>
 </div>
@@ -73,6 +74,7 @@
 		align-items: center;
 		margin-bottom: 2rem;
 		width: 100%;
+		max-width: 1200px;
 	}
 
 	.title {
