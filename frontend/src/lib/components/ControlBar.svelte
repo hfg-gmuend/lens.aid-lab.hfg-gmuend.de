@@ -53,7 +53,7 @@
 <style>
 	.control-bar {
 		width: 100%;
-		max-width: 1400px;
+		max-width: 1200px;
 		display: flex;
 		align-items: center;
 		gap: 2rem;

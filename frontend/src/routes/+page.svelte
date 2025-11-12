@@ -596,7 +596,7 @@
 
 	.header {
 		width: 100%;
-		max-width: 1400px;
+		max-width: 1200px;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -639,7 +639,7 @@
 	.main-viewport {
 		position: relative;
 		width: 100%;
-		max-width: 1400px;
+		max-width: 1200px;
 		border-radius: 1.5rem;
 		overflow: hidden;
 		display: flex;
