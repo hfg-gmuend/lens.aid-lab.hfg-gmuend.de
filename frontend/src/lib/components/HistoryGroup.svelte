@@ -29,7 +29,7 @@
 
 	function handleDeleteGroup(event) {
 		event.stopPropagation();
-		onDeleteGroup(group.id);
+		onDeleteGroup(group.inputHash);
 	}
 
 	function toggleExpanded() {

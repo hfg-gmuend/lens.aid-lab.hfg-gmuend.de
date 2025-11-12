@@ -51,6 +51,11 @@
 </div>
 
 <style>
+
+	*:focus {
+    outline: none;
+}
+
 	.control-bar {
 		width: 100%;
 		max-width: 1200px;
@@ -124,6 +129,7 @@
 
 	.prompt-input:focus {
 		border-color: var(--color-accent);
+		outline: none;
 	}
 
 	.slider-container {

@@ -111,21 +111,12 @@ function createHistoryStore() {
 					const groupIndex = history.findIndex((g) => g.inputHash === inputHash);
 
 					if (groupIndex >= 0) {
-						// Add to existing group
-						history[groupIndex].variations.unshift({
-							id,
-							inputImage,
-							resultImage,
-							prompt,
-							denoise,
-							seed,
-							timestamp: item.timestamp
-						});
-					} else {
-						// Create new group
-						history.unshift({
-							inputHash,
-							inputImage,
+						// Add to existing group and move group to top
+						const existingGroup = history[groupIndex];
+						
+						// Create new group object with new variations array to trigger reactivity
+						const updatedGroup = {
+							...existingGroup,
 							variations: [
 								{
 									id,
@@ -135,12 +126,35 @@ function createHistoryStore() {
 									denoise,
 									seed,
 									timestamp: item.timestamp
-								}
+								},
+								...existingGroup.variations
 							]
-						});
+						};
+						
+						// Remove old group and add updated group at the top
+						const newHistory = history.filter((_, i) => i !== groupIndex);
+						return [updatedGroup, ...newHistory];
+					} else {
+						// Create new group at the top
+						return [
+							{
+								inputHash,
+								inputImage,
+								variations: [
+									{
+										id,
+										inputImage,
+										resultImage,
+										prompt,
+										denoise,
+										seed,
+										timestamp: item.timestamp
+									}
+								]
+							},
+							...history
+						];
 					}
-
-					return history;
 				});
 
 				// Cleanup old items if over limit

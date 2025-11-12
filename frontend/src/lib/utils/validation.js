@@ -11,23 +11,19 @@ const MAX_PROMPT_LENGTH = 500;
  * @returns {{valid: boolean, error?: string}}
  */
 export function validatePrompt(prompt) {
+	// Prompt is optional, so allow empty strings
 	if (!prompt || typeof prompt !== 'string') {
-		return { valid: false, error: 'Prompt is required' };
+		return { valid: true };
 	}
 
 	const trimmed = prompt.trim();
 
+	// Empty prompts are allowed
 	if (trimmed.length === 0) {
-		return { valid: false, error: 'Prompt cannot be empty' };
+		return { valid: true };
 	}
 
-	if (trimmed.length < MIN_PROMPT_LENGTH) {
-		return {
-			valid: false,
-			error: `Prompt must be at least ${MIN_PROMPT_LENGTH} characters long`
-		};
-	}
-
+	// Only validate length if prompt is provided
 	if (trimmed.length > MAX_PROMPT_LENGTH) {
 		return {
 			valid: false,

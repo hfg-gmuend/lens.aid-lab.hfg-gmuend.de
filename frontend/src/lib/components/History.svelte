@@ -1,4 +1,5 @@
 <script>
+	import { base } from '$app/paths';
 	import Icon from './Icon.svelte';
 	import HistoryGroup from './HistoryGroup.svelte';
 	import grid from '$lib/assets/icons/grid.svg?raw';
@@ -82,6 +83,7 @@
 		<div class="history-header">
 			<h2 class="history-title">History</h2>
 			<div class="history-controls">
+				<a href="{base}/canvas" class="history-toggle">Canvas</a>
 				<button class="history-toggle" onclick={toggleGroupMode} aria-label="Toggle grouped view">
 					{groupMode === 'grouped' ? 'Standard' : 'Grouped'}
 				</button>

@@ -19,7 +19,6 @@
 	import { validatePrompt, sanitizePrompt } from '$lib/utils/validation.js';
 	import { validateImage, compressImage } from '$lib/utils/imageUtils.js';
 	import { uploadImage, checkConnectivity } from '$lib/api/client.js';
-	import { registerShortcut, initKeyboardShortcuts, clearAllShortcuts } from '$lib/utils/keyboard.js';
 	import { initNetworkMonitor } from '$lib/utils/network.js';
 	import { cacheImage, getCachedImage, preloadImage } from '$lib/utils/cache.js';
 
@@ -48,6 +47,9 @@
 	let historyViewMode = $state($settings.historyViewMode); // 'grid' or 'large'
 	let historyGroupMode = $state($settings.historyGroupMode); // 'grouped' or 'standard'
 	let currentInputHash = $state(null); // Track hash of current canvas content
+	
+	// Store the last transformation data for manual save
+	let lastTransformData = $state(null);
 
 	// Persist settings when they change
 	$effect(() => {
@@ -302,13 +304,20 @@
 			resultImage = outputUrl;
 			inputImageUrl = inputUrl;
 
-			// Save to history with actual values from API and our input hash
-			await historyDB.add(inputHash, inputUrl, outputUrl, data.prompt, data.denoise, data.seed);
+			// Store transformation data for later save (when user clicks check button)
+			lastTransformData = {
+				inputHash,
+				inputUrl,
+				outputUrl,
+				prompt: data.prompt,
+				denoise: data.denoise,
+				seed: data.seed
+			};
 
 			// Add to prompt history
 			promptHistory.add(cleanPrompt);
 
-			notifySuccess('Image transformed successfully');
+			notifySuccess('Image transformed successfully! Click the check button to save to history.');
 		} catch (error) {
 			console.error('Error transferring image:', error);
 			notifyError(error.message || 'Failed to transform image. Please try again.');
@@ -318,8 +327,33 @@
 		}
 	}
 
-	// Reuse - copy right panel to left canvas
-	function handleReuse() {
+	// Save to history only (check button)
+	async function handleSaveToHistory() {
+		if (!lastTransformData) {
+			notifyWarning('No image to save');
+			return;
+		}
+
+		try {
+			await historyDB.add(
+				lastTransformData.inputHash,
+				lastTransformData.inputUrl,
+				lastTransformData.outputUrl,
+				lastTransformData.prompt,
+				lastTransformData.denoise,
+				lastTransformData.seed
+			);
+			
+			notifySuccess('Saved to history');
+			lastTransformData = null; // Clear after saving
+		} catch (error) {
+			console.error('Failed to save to history:', error);
+			notifyError('Failed to save to history');
+		}
+	}
+
+	// Reuse - copy right panel to left canvas (top handle)
+	async function handleReuse() {
 		if (!resultImage || !context) return;
 
 		stopCamera();
@@ -332,21 +366,31 @@
 			context.drawImage(image, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
 			// Update the current input hash after loading new content to canvas
 			currentInputHash = await generateInputImageHash();
+			notifySuccess('Image copied to input');
 		};
 	}
 
 	// Download result image
-	function handleDownload() {
+	async function handleDownload() {
 		if (!resultImage) return;
 
 		try {
+			// Fetch the image and create a blob to avoid CORS issues
+			const response = await fetch(resultImage);
+			const blob = await response.blob();
+			const url = URL.createObjectURL(blob);
+			
 			const link = document.createElement('a');
-			link.href = resultImage;
+			link.href = url;
 			const filename = promptValue
 				? `futures-lens-${promptValue.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`
 				: 'futures-lens.jpg';
 			link.download = filename;
 			link.click();
+			
+			// Clean up the blob URL
+			setTimeout(() => URL.revokeObjectURL(url), 100);
+			
 			notifySuccess('Image downloaded');
 		} catch (error) {
 			console.error('Error downloading image:', error);
@@ -432,25 +476,8 @@
 		// Setup network monitoring
 		const cleanupNetwork = initNetworkMonitor();
 
-		// Setup keyboard shortcuts
-		const cleanupKeyboard = initKeyboardShortcuts();
-
-		// Register shortcuts
-		registerShortcut('ctrl+u', () => handleUpload(), { preventDefault: true }); // Upload image
-		registerShortcut('ctrl+enter', () => handleTransfer(), { preventDefault: true }); // Transfer/Generate
-		registerShortcut('ctrl+k', () => handleOpenLibrary(), { preventDefault: true }); // Open prompt library
-		registerShortcut('ctrl+d', () => handleDownload(), { preventDefault: true }); // Download
-		registerShortcut('ctrl+r', () => handleReuse(), { preventDefault: true }); // Reuse
-		registerShortcut('c', () => handleCamera()); // Toggle camera
-		registerShortcut('escape', () => {
-			if (showPromptLibrary) showPromptLibrary = false;
-			if (showComparison) showComparison = false;
-		}); // Close modals
-
 		return () => {
 			cleanupNetwork();
-			cleanupKeyboard();
-			clearAllShortcuts();
 			storageMonitor.stop();
 		};
 	});
@@ -458,7 +485,6 @@
 	onDestroy(() => {
 		stopLoop();
 		stopCamera();
-		clearAllShortcuts();
 	});
 </script>
 
@@ -467,7 +493,6 @@
 	<div class="header">
 		<h1 class="title">futures lens</h1>
 		<div class="header-links">
-			<a href="{base}/canvas" class="about-link">Canvas</a>
 			<a href="{base}/about" class="about-link">About</a>
 		</div>
 	</div>
@@ -513,13 +538,13 @@
 						{#if loadingProgress.stage === 'preparing'}
 							<p>Preparing image...</p>
 						{:else if loadingProgress.stage === 'uploading'}
-							<p>Uploading...</p>
+							<p>Generating...</p>
 						{:else if loadingProgress.stage === 'requesting'}
-							<p>Transforming...</p>
+							<p>Generating...</p>
 						{:else if loadingProgress.stage === 'retrying'}
 							<p>Retrying connection...</p>
 						{:else}
-							<p>Processing...</p>
+							<p>Generating...</p>
 						{/if}
 						{#if loadingProgress.progress > 0}
 							<div class="progress-bar">
@@ -530,9 +555,6 @@
 				</div>
 			{:else if resultImage}
 				<img src={resultImage} alt="Transformed future vision" class="result-image" />
-				<button class="comparison-button" onclick={handleComparison} aria-label="Compare before and after">
-					<Icon src={compare} size={24} />
-				</button>
 			{:else}
 				<div class="empty-state">
 					<p>Click transfer to generate</p>
@@ -541,9 +563,9 @@
 
 			<PanelControls
 				position="bottom-right"
-				checkDisabled={!resultImage}
+				checkDisabled={!lastTransformData}
 				downloadDisabled={!resultImage}
-				onCheck={handleReuse}
+				onCheck={handleSaveToHistory}
 				onDownload={handleDownload}
 			/>
 		</div>
@@ -726,29 +748,6 @@
 		background: var(--color-accent);
 		transition: width 0.3s ease;
 		border-radius: 3px;
-	}
-
-	.comparison-button {
-		position: absolute;
-		bottom: 5rem;
-		right: 1.5rem;
-		width: 3.5rem;
-		height: 3.5rem;
-		border-radius: 50%;
-		border: 2px solid var(--color-accent);
-		background: transparent;
-		color: var(--color-accent);
-		cursor: pointer;
-		transition: all 0.2s ease;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.comparison-button:hover {
-		background: var(--color-accent);
-		color: white;
-		transform: scale(1.05);
 	}
 
 	.empty-state {

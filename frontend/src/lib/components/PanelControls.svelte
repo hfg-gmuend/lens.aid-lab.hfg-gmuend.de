@@ -26,7 +26,7 @@
 			<Icon src={camera} size={28} />
 		</button>
 	{:else}
-		<button class="icon-button" onclick={onCheck} disabled={checkDisabled} aria-label="Check">
+		<button class="icon-button" onclick={onCheck} disabled={checkDisabled} aria-label="Save to history">
 			<Icon src={check} size={28} />
 		</button>
 		<button
