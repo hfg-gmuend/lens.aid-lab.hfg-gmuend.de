@@ -79,7 +79,7 @@
 		padding: 1rem 1.5rem;
 		padding-right: 3.5rem;
 		border-radius: 2rem;
-		border: 1px solid rgba(255, 255, 255, 0.2);
+		border: 2px solid rgba(255, 255, 255, 0.2);
 		background-color: transparent;
 		color: white;
 		font-size: 1rem;
@@ -130,6 +130,7 @@
 	.prompt-input:focus {
 		border-color: var(--color-accent);
 		outline: none;
+    	box-shadow: none;
 	}
 
 	.slider-container {
