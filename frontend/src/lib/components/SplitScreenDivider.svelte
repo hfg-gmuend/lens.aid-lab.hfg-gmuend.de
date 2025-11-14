@@ -25,7 +25,7 @@
 		transform: translateX(-50%);
 		background-color: var(--color-accent);
 		border-radius: 999px;
-		width: 10em;
+		width: 7em;
 		padding: 0.75rem 1rem;
 		display: flex;
 		align-items: center;
@@ -47,17 +47,27 @@
 	}
 
 	.handle-top {
-		top: 2em;
+		top: 1.6em;
 	}
 
 	.handle-bottom {
-		bottom: 2em;
+		bottom: 1.6em;
 	}
 
 	/* Hide handles on mobile */
 	@media (max-width: 600px) {
 		.handle {
-			display: none;
+			top: 50%;
+			bottom: auto;
+			transform: translateY(-50%) rotate(-90deg);
+			
+		}
+		.handle-top {
+			left: -1em;
+		}
+		.handle-bottom {
+			right: -1em;
+			left: auto;
 		}
 	}
 </style>

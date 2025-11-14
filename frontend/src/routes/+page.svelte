@@ -596,14 +596,14 @@
 	/>
 {/if}
 
-<!-- Image Comparison Modal -->
+<!-- Image Comparison Modal
 {#if showComparison && inputImageUrl && resultImage}
 	<ImageComparison
 		inputImage={inputImageUrl}
 		outputImage={resultImage}
 		onClose={() => (showComparison = false)}
 	/>
-{/if}
+{/if} -->
 
 <style>
 	.page-container {

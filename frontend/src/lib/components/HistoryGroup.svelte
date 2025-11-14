@@ -130,12 +130,12 @@
 		border-radius: 0.75rem;
 		overflow: hidden;
 		background-color: rgba(255, 255, 255, 0.05);
-		transition: all 0.2s ease;
+		/* transition: all 0.2s ease; */
 	}
 
 	.history-group:hover {
-		border-color: var(--color-accent);
-		background-color: rgba(255, 107, 74, 0.1);
+		/* border-color: var(--color-accent); */
+		background-color:rgba(117, 117, 117, 0.358);
 	}
 
 	.delete-group-button {
