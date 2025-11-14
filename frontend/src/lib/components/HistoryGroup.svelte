@@ -290,13 +290,11 @@
 		overflow: hidden;
 		background: none;
 		cursor: pointer;
-		transition: all 0.2s ease;
 		position: relative;
 	}
 
 	.variation-button:hover {
 		border-color: var(--color-accent);
-		transform: scale(1.05);
 	}
 
 	.variation-image {
@@ -314,7 +312,6 @@
 		background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
 		padding: 0.5rem 0.25rem 0.25rem;
 		opacity: 0;
-		transition: opacity 0.2s ease;
 	}
 
 	.variation-button:hover .variation-overlay {
@@ -354,9 +351,6 @@
 		justify-content: center;
 		cursor: pointer;
 		opacity: 0;
-		transition:
-			opacity 0.2s ease,
-			background-color 0.2s ease;
 		z-index: 10;
 	}
 

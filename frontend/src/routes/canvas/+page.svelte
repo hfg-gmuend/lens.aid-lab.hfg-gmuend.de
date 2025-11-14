@@ -631,7 +631,6 @@
 		border: 2px solid transparent;
 		border-radius: 0.5rem;
 		cursor: pointer;
-		transition: all 0.2s ease;
 		padding: 0;
 		position: relative;
 	}
@@ -640,7 +639,6 @@
 		font-size: 18px;
 		font-weight: 600;
 		color: rgba(255, 255, 255, 0.6);
-		transition: color 0.2s ease;
 		user-select: none;
 	}
 
@@ -691,14 +689,12 @@
 		text-decoration: none;
 		font-size: 0.9rem;
 		font-weight: 500;
-		transition: all 0.2s ease;
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 	}
 
 	.back-link:hover {
 		background: rgba(255, 107, 74, 0.15);
 		border-color: var(--color-accent);
-		transform: translateX(-2px);
 	}
 
 	/* Zoom Display */

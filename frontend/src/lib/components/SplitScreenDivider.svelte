@@ -35,11 +35,6 @@
 		cursor: pointer;
 		border: none;
 		outline: none;
-		transition: all 0.2s ease;
-	}
-
-	.handle:hover {
-		transform: translateX(-50%) scale(1.05);
 	}
 
 	.handle :global(span) {
