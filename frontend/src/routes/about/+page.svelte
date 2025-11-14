@@ -144,6 +144,7 @@
 		font-size: 2rem;
 		font-weight: 300;
 		font-style: italic;
+		font-family: ui-sans-serif, system-ui, sans-serif;
 		color: white;
 		margin: 0;
 	}

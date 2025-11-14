@@ -46,7 +46,7 @@
 			class="familiarity-slider"
 		/>
 		<label for="denoise-slider" class="slider-label">Unfamiliar</label>
-		<span class="slider-value">{denoise.toFixed(2)}</span>
+		<!-- <span class="slider-value">{denoise.toFixed(2)}</span> -->
 	</div>
 </div>
 
