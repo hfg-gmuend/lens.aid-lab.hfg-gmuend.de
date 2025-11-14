@@ -36,15 +36,14 @@
 
 	const stack = [
 		{ name: 'SvelteKit', url: 'https://kit.svelte.dev', note: 'Reactive interface and PWA shell' },
-		{ name: 'Konva', url: 'https://konvajs.org', note: 'Interactive canvas visualization' },
 		{ name: 'IndexedDB', url: 'https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API', note: 'Client-side history storage' },
 		{ name: 'FastAPI', url: 'https://fastapi.tiangolo.com', note: 'Orchestrates ComfyUI pipelines' },
 		{ name: 'ComfyUI', url: 'https://comfyui.com', note: 'Diffusion workflow backend' }
 	];
 
 	const contributors = [
-		{ name: 'Jordi Trost', role: 'Concept & Workshop' },
-		{ name: 'Christopher Pietsch', role: 'Concept & Engineering' }
+		{ name: 'Jordi Trost', role: 'Workshop' },
+		{ name: 'Christopher Pietsch', role: 'Engineering' }
 	];
 </script>
 
@@ -76,9 +75,9 @@
 
 	<section class="section">
 		<h2 class="section-title">Design Process</h2>
-		<div class="workflow-grid">
+		<div class="card-grid">
 			{#each workflow as block}
-				<div class="workflow-card">
+				<div class="card">
 					<h3>{block.title}</h3>
 					<ol>
 						{#each block.steps as step}
@@ -91,27 +90,71 @@
 	</section>
 
 	<section class="section">
-		<h2 class="section-title">Technology stack</h2>
-		<ul class="stack-list">
+		<h2 class="section-title">Technology Stack</h2>
+		<div class="card-grid">
 			{#each stack as item}
-				<li>
-					<a href={item.url} target="_blank" rel="noopener noreferrer">{item.name}</a>
-					<span>— {item.note}</span>
-				</li>
+				<div class="card">
+					<h3>{item.name}</h3>
+					<p>{item.note}</p>
+					<!-- {#if item.url}
+						<a href={item.url} target="_blank" rel="noopener noreferrer" class="tech-link">Learn more →</a>
+					{/if} -->
+				</div>
 			{/each}
-		</ul>
+		</div>
+	</section>
+
+	<section class="section">
+		<h2 class="section-title">AI Pipeline</h2>
+		<div class="pipeline-description">
+			<p>
+				The AI pipeline uses ComfyUI to orchestrate a sophisticated image-to-image transformation workflow powered by Stable Diffusion XL:
+			</p>
+			
+			<div class="pipeline-steps">
+				<div class="pipeline-step" data-step="1">
+					<h3>Input Processing</h3>
+					<p>Your uploaded or captured image is resized to 1024×1024 pixels and encoded into latent space using VAE (Variational Autoencoder) for efficient processing.</p>
+				</div>
+				
+				<div class="pipeline-step" data-step="2">
+					<h3>IP-Adapter Conditioning</h3>
+					<p>The input image is processed through IP-Adapter, which extracts visual features and conditions the generation to maintain structural similarity while allowing creative transformation.</p>
+				</div>
+				
+				<div class="pipeline-step" data-step="3">
+					<h3>Model Enhancement</h3>
+					<p>The base JuggernautXL model is enhanced with a detail-focused LoRA (Low-Rank Adaptation) that improves texture and fine detail generation.</p>
+				</div>
+				
+				<div class="pipeline-step" data-step="4">
+					<h3>Text Guidance</h3>
+					<p>Your prompt is encoded and combined with the visual conditioning. The familiarity slider controls the denoising strength, balancing between faithful reproduction and creative interpretation.</p>
+				</div>
+				
+				<div class="pipeline-step" data-step="5">
+					<h3>Diffusion Sampling</h3>
+					<p>The KSampler uses DPM++ 2M with Karras scheduling for 20 steps at CFG 6.5, generating the final transformed image through iterative denoising.</p>
+				</div>
+				
+				<div class="pipeline-step" data-step="6">
+					<h3>Output Decoding</h3>
+					<p>The latent result is decoded back to pixel space and returned as your transformed image.</p>
+				</div>
+			</div>
+		</div>
 	</section>
 
 	<section class="section">
 		<h2 class="section-title">Team</h2>
-		<ul class="contributors">
+		<div class="card-grid">
 			{#each contributors as contributor}
-				<li>
-					<strong>{contributor.name}</strong>
-					<span>{contributor.role}</span>
-				</li>
+				<div class="card">
+					<h3>{contributor.name}</h3>
+					<p>{contributor.role}</p>
+				</div>
 			{/each}
-		</ul>
+		</div>
 		<p class="cta">
 			View the broader research program at
 			<a href="https://aid-lab.hfg-gmuend.de" target="_blank" rel="noopener noreferrer">AI+Design Lab ↗</a>
@@ -168,8 +211,7 @@
 	}
 
 	.hero,
-	.section,
-	.cta-panel {
+	.section {
 		width: 100%;
 		max-width: 1200px;
 		color: rgba(255, 255, 255, 0.9);
@@ -216,10 +258,6 @@
 		gap: 0.75rem;
 	}
 
-	.card:hover {
-		border-color: var(--color-accent);
-	}
-
 	.card h3 {
 		margin: 0;
 		font-size: 1.2rem;
@@ -230,79 +268,6 @@
 		margin: 0;
 		font-size: 1rem;
 		line-height: 1.7;
-	}
-
-	.workflow-grid {
-		display: grid;
-		gap: 1.5rem;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-	}
-
-	.workflow-card {
-		background: rgba(255, 255, 255, 0.03);
-		border-radius: 1rem;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		padding: 1.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.workflow-card h3 {
-		margin: 0;
-		font-size: 1.1rem;
-		color: white;
-	}
-
-	.workflow-card ol {
-		margin: 0;
-		padding-left: 1.25rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		font-size: 0.95rem;
-		line-height: 1.6;
-	}
-
-	.stack-list,
-	.contributors {
-		margin: 0;
-		padding: 0;
-		list-style: none;
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		font-size: 1rem;
-	}
-
-	.stack-list li,
-	.contributors li {
-		display: flex;
-		gap: 0.25rem;
-		flex-wrap: wrap;
-	}
-
-	.stack-list a {
-		color: white;
-		text-decoration: none;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-	}
-
-	.stack-list a:hover {
-		border-color: var(--color-accent);
-		color: var(--color-accent);
-	}
-
-	.stack-list span {
-		color: rgba(255, 255, 255, 0.6);
-	}
-
-	.contributors strong {
-		color: white;
-	}
-
-	.contributors span {
-		color: rgba(255, 255, 255, 0.6);
 	}
 
 	.cta {
@@ -318,64 +283,68 @@
 		padding-bottom: 0.1rem;
 	}
 
-	.cta a:hover {
-		border-color: var(--color-accent);
-	}
-
-	.cta-panel {
-		margin-top: 4rem;
-		background: rgba(255, 255, 255, 0.04);
-		border-radius: 1.25rem;
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		padding: 2rem;
+	.pipeline-description {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
-		text-align: left;
-	}
-
-	.cta-panel h2 {
-		margin: 0;
-		color: white;
-		font-size: 1.6rem;
-	}
-
-	.cta-panel p {
-		margin: 0;
-		color: rgba(255, 255, 255, 0.75);
+		gap: 2rem;
+		font-size: 1rem;
 		line-height: 1.6;
 	}
 
-	.cta-actions {
-		display: flex;
-		gap: 1rem;
-		flex-wrap: wrap;
+	.pipeline-description p {
+		margin: 0 0 1.5rem 0;
+		color: rgba(255, 255, 255, 0.85);
+		font-size: 1.1rem;
+		line-height: 1.7;
 	}
 
-	.cta-link {
-		display: inline-flex;
+	.pipeline-steps {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 1.5rem;
+	}
+
+	.pipeline-step {
+		background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+		border-radius: 1rem;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		padding: 1.75rem;
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.pipeline-step::before {
+		content: attr(data-step);
+		position: absolute;
+
+		width: 2rem;
+		height: 2rem;
+		background: var(--color-accent);
+		color: white;
+		border-radius: 50%;
+		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 0.75rem 1.5rem;
-		border-radius: 0.75rem;
-		border: 1px solid var(--color-accent);
+		font-size: 0.9rem;
+		font-weight: 600;
+		z-index: 1;
+	}
+
+	.pipeline-step h3 {
+		margin: 0 0 0.5rem 0;
+		font-size: 1.2rem;
 		color: white;
-		text-decoration: none;
-		font-weight: 500;
+		font-weight: 600;
+		padding-left: 3rem;
 	}
 
-	.cta-link:hover {
-		background-color: var(--color-accent);
-	}
-
-	.cta-link.secondary {
-		border-color: rgba(255, 255, 255, 0.4);
-		color: rgba(255, 255, 255, 0.85);
-	}
-
-	.cta-link.secondary:hover {
-		background-color: rgba(255, 255, 255, 0.1);
-		color: white;
+	.pipeline-step p {
+		margin: 0;
+		color: rgba(255, 255, 255, 0.8);
+		line-height: 1.6;
+		font-size: 0.95rem;
 	}
 
 	@media (max-width: 600px) {
@@ -391,10 +360,17 @@
 			font-size: 1.3rem;
 		}
 
-		.card,
-		.workflow-card,
-		.cta-panel {
+		.card {
 			padding: 1.25rem;
+		}
+
+		.pipeline-steps {
+			grid-template-columns: 1fr;
+			gap: 1rem;
+		}
+
+		.pipeline-step {
+			padding: 1.5rem;
 		}
 	}
 </style>
