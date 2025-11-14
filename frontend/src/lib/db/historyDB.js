@@ -172,15 +172,19 @@ function createHistoryStore() {
 				await db.remove(db.STORES.HISTORY, id);
 
 				update((history) => {
-					for (const group of history) {
-						const index = group.variations.findIndex((v) => v.id === id);
-						if (index >= 0) {
-							group.variations.splice(index, 1);
-							break;
+					const newHistory = history.map((group) => {
+						const variationIndex = group.variations.findIndex((v) => v.id === id);
+						if (variationIndex >= 0) {
+							// Create new group with variation removed
+							return {
+								...group,
+								variations: group.variations.filter((v) => v.id !== id)
+							};
 						}
-					}
+						return group;
+					});
 					// Filter out empty groups
-					return history.filter((g) => g.variations.length > 0);
+					return newHistory.filter((g) => g.variations.length > 0);
 				});
 			} catch (error) {
 				console.error('Failed to remove variation:', error);

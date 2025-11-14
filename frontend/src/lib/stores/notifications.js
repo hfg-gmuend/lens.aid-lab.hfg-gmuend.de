@@ -11,6 +11,11 @@ let idCounter = 0;
  * @param {number} duration - How long to show the notification in ms (0 = permanent)
  */
 export function addNotification(message, type = 'info', duration = 1000) {
+	// Only show toasts for errors and warnings
+	if (type !== 'error' && type !== 'warning') {
+		return null;
+	}
+
 	const id = idCounter++;
 	const notification = { id, message, type, duration };
 
