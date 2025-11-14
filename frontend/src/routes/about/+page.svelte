@@ -3,34 +3,34 @@
 
 	const capabilities = [
 		{
-			title: 'Transform Everyday Objects',
+			title: 'Explore Diverse Futures',
 			description:
-				'Capture or import photos and explore how subtle or radical shifts in context reshape their meaning. Futures Lens turns speculative prompts into visual narratives.'
+				'Futures are shaped by different perspectives, each offering unique possibilities. Use AI as a design method to prototype alternative realities and understand how context transforms everyday objects.'
 		},
 		{
-			title: 'Experiment With Familiarity',
+			title: 'Speculative Design Strategies',
 			description:
-				'Adjust the familiarity slider to tune results from near-photographic to wildly divergent interpretations, then compare them side-by-side.'
+				'Apply critical design techniques like constraints, exaggeration, and absurdity. Turn these into AI prompts to create provocative, thought-provoking artifacts that challenge assumptions.'
 		},
 		{
-			title: 'Build Iterative Histories',
+			title: 'Iterative Co-Creation',
 			description:
-				'Generate multiple variations, group them by source image, and study how ideas evolve across each branch in the catalog.'
+				'Engage in playful collaboration with AI across multiple iterations. Decontextualize familiar objects and redefine their purpose, building a catalog of fantastic things.'
 		}
 	];
 
 	const workflow = [
 		{
-			title: 'Set the Stage',
-			steps: ['Capture an object or upload a reference image', 'Note what qualities define its present use']
+			title: 'Decontextualize',
+			steps: ['Select an everyday object', 'Consider its current context and function', 'Imagine removing it from familiar surroundings']
 		},
 		{
-			title: 'Speculate',
-			steps: ['Describe the future you imagine', 'Dial in familiarity, seed and prompt details', 'Transfer to create a new visual hypothesis']
+			title: 'Apply Speculative Strategies',
+			steps: ['Choose constraints, exaggeration, or absurdity', 'Craft prompts that challenge assumptions', 'Use AI to generate speculative interpretations']
 		},
 		{
-			title: 'Collect & Compare',
-			steps: ['Review grouped histories', 'Export results for presentations or research decks', 'Map relationships in the Canvas view']
+			title: 'Iterate & Catalog',
+			steps: ['Create multiple variations across iterations', 'Build narratives around transformed objects', 'Curate your catalog of fantastic things']
 		}
 	];
 
@@ -63,7 +63,7 @@
 	</section>
 
 	<section class="section">
-		<h2 class="section-title">What you can explore</h2>
+		<h2 class="section-title">Workshop Methodology</h2>
 		<div class="card-grid">
 			{#each capabilities as capability}
 				<article class="card">
@@ -75,7 +75,7 @@
 	</section>
 
 	<section class="section">
-		<h2 class="section-title">Suggested workflow</h2>
+		<h2 class="section-title">Design Process</h2>
 		<div class="workflow-grid">
 			{#each workflow as block}
 				<div class="workflow-card">
