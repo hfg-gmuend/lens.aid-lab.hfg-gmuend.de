@@ -489,15 +489,11 @@
 </script>
 
 <div class="page-container">
-	<!-- Title -->
-	<div class="header">
-		<h1 class="title">futures lens</h1>
-		<div class="header-links">
-			<a href="{base}/about" class="about-link">About</a>
-		</div>
-	</div>
-
-	<!-- Hidden video element for camera -->
+	<!-- Top bar with title and about link -->
+	<div class="top-bar">
+		<h1 class="title s-y_bCXRrkrYfP">futures lens</h1>
+		<a href="{base}/about" class="about-link">About</a>
+	</div>	<!-- Hidden video element for camera -->
 	<video
 		bind:this={videoElement}
 		width={CANVAS_SIZE}
@@ -612,23 +608,8 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		padding: 2rem 1rem;
-		gap: 2rem;
-	}
-
-	.header {
-		width: 100%;
-		max-width: 1200px;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
+		padding: 1rem;
 		gap: 1rem;
-	}
-
-	.header-links {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
 	}
 
 	.title {
@@ -638,10 +619,20 @@
 		color: white;
 		margin: 0;
 		text-align: center;
-		flex: 1;
+	}
+
+	.top-bar {
+		width: 100%;
+		max-width: 1200px;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		position: relative;
 	}
 
 	.about-link {
+		position: absolute;
+		right: 0;
 		padding: 0.75rem 1.5rem;
 		border-radius: 2rem;
 		background-color: #5757578a;
@@ -653,6 +644,13 @@
 		transition: all 0.2s ease;
 		font-size: 0.9rem;
 		white-space: nowrap;
+		text-decoration: none;
+		color: inherit;
+	}
+
+	.about-link:hover {
+		background-color: var(--color-accent);
+		color: white;
 	}
 
 	.about-link:hover {
