@@ -54,7 +54,7 @@
 		.handle {
 			top: 50%;
 			bottom: auto;
-			transform: translateY(-50%) rotate(-90deg);
+			transform: translateY(-50%) rotate(90deg);
 			
 		}
 		.handle-top {
