@@ -43,8 +43,8 @@
 	];
 
 	const contributors = [
-		{ name: 'Jordi Trost', role: 'Concept & Research' },
-		{ name: 'Christopher Pietsch', role: 'Engineering & Experience Design' }
+		{ name: 'Jordi Trost', role: 'Concept & Workshop' },
+		{ name: 'Christopher Pietsch', role: 'Concept & Engineering' }
 	];
 </script>
 
@@ -103,7 +103,7 @@
 	</section>
 
 	<section class="section">
-		<h2 class="section-title">Team & studio</h2>
+		<h2 class="section-title">Team</h2>
 		<ul class="contributors">
 			{#each contributors as contributor}
 				<li>
@@ -149,16 +149,19 @@
 	}
 
 	.back-link {
-		display: inline-flex;
+		padding: 0.75rem 1.5rem;
+		border-radius: 2rem;
+		background-color: #5757578a;
+		/* color: var(--color-accent); */
+		cursor: pointer;
+		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		padding: 0.75rem 1.25rem;
-		background-color: transparent;
-		color: var(--color-accent);
-		text-decoration: none;
+		justify-content: center;
+		transition: all 0.2s ease;
 		font-size: 0.9rem;
 		white-space: nowrap;
-	}	.back-link:hover {
+	}	
+	.back-link:hover {
 		background-color: var(--color-accent);
 		color: white;
 	}

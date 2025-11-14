@@ -642,14 +642,16 @@
 	}
 
 	.about-link {
-		padding: 0.5rem 1rem;
-		border-radius: 0.5rem;
-		border: 1px solid var(--color-accent);
-		background-color: transparent;
-		color: var(--color-accent);
-		text-decoration: none;
-		font-size: 0.9rem;
+		padding: 0.75rem 1.5rem;
+		border-radius: 2rem;
+		background-color: #5757578a;
+		/* color: var(--color-accent); */
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		transition: all 0.2s ease;
+		font-size: 0.9rem;
 		white-space: nowrap;
 	}
 

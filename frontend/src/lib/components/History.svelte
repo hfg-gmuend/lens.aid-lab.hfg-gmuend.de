@@ -4,6 +4,8 @@
 	import HistoryGroup from './HistoryGroup.svelte';
 	import grid from '$lib/assets/icons/grid.svg?raw';
 	import rows from '$lib/assets/icons/rows.svg?raw';
+	import linked from '$lib/assets/icons/linked.svg?raw';
+	import unlinked from '$lib/assets/icons/unlinked.svg?raw';
 	import close from '$lib/assets/icons/close.svg?raw';
 	import download from '$lib/assets/icons/download.svg?raw';
 	import { historyDB } from '$lib/db/historyDB.js';
@@ -85,18 +87,18 @@
 			<div class="history-controls">
 				<!-- <a href="{base}/canvas" class="history-toggle">Canvas</a> -->
 				<button class="history-toggle" onclick={toggleGroupMode} aria-label="Toggle grouped view">
-					{groupMode === 'grouped' ? 'Standard' : 'Grouped'}
+					<Icon src={groupMode === 'grouped' ? linked : unlinked} size={20} />
 				</button>
 				<button
 					class="history-toggle hide-on-mobile"
 					onclick={toggleView}
 					aria-label="Toggle history view"
 				>
-					<Icon src={viewMode === 'grid' ? rows : grid} size={20} />
+					<Icon src={viewMode === 'grid' ? grid : rows} size={20} />
 				</button>
-				<button class="history-toggle" onclick={handleExport} aria-label="Export history">
+				<!-- <button class="history-toggle" onclick={handleExport} aria-label="Export history">
 					<Icon src={download} size={20} />
-				</button>
+				</button> -->
 				<button class="history-clear" onclick={onClearHistory}>Clear All</button>
 			</div>
 		</div>
@@ -175,11 +177,10 @@
 	}
 
 	.history-toggle {
-		padding: 0.5rem 1rem;
-		border-radius: 0.5rem;
-		border: 1px solid var(--color-accent);
-		background-color: transparent;
-		color: var(--color-accent);
+		padding: 0.75rem 1.5rem;
+		border-radius: 2rem;
+		background-color: #5757578a;
+		/* color: var(--color-accent); */
 		cursor: pointer;
 		display: flex;
 		align-items: center;
@@ -199,14 +200,17 @@
 	}
 
 	.history-clear {
-		padding: 0.5rem 1rem;
-		border-radius: 0.5rem;
-		border: 1px solid var(--color-accent);
-		background-color: transparent;
-		color: var(--color-accent);
+		padding: 0.75rem 1.5rem;
+		border-radius: 2rem;
+		background-color: #5757578a;
+		/* color: var(--color-accent); */
 		cursor: pointer;
-		font-size: 0.9rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		transition: all 0.2s ease;
+		font-size: 0.9rem;
+		white-space: nowrap;
 	}
 
 	.history-clear:hover {
