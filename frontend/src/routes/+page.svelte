@@ -48,6 +48,9 @@
 	let historyGroupMode = $state($settings.historyGroupMode); // 'grouped' or 'standard'
 	let currentInputHash = $state(null); // Track hash of current canvas content
 	
+	// Drag and drop state
+	let dragOver = $state(false);
+	
 	// Store the last transformation data for manual save
 	let lastTransformData = $state(null);
 
@@ -218,6 +221,87 @@
 			}
 		};
 		input.click();
+	}
+
+	// Process dropped file (drag and drop)
+	async function processDroppedFile(file) {
+		if (!file) return;
+
+		// Validate image
+		const validation = validateImage(file);
+		if (!validation.valid) {
+			notifyError(validation.error);
+			return;
+		}
+
+		try {
+			notifyInfo('Processing image...');
+
+			// Compress image if needed
+			let processedFile = file;
+			if (file.size > 2 * 1024 * 1024) {
+				// Compress files larger than 2MB
+				notifyInfo('Compressing image...');
+				processedFile = await compressImage(file, CANVAS_SIZE, CANVAS_SIZE, 0.85);
+			}
+
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				const image = new Image();
+				image.src = e.target.result;
+				image.onload = async () => {
+					if (!context) return;
+
+					// Calculate aspect ratio fit
+					const aspectRatio = image.width / image.height;
+					let drawWidth, drawHeight, offsetX, offsetY;
+
+					if (aspectRatio > 1) {
+						drawWidth = CANVAS_SIZE * aspectRatio;
+						drawHeight = CANVAS_SIZE;
+						offsetX = (CANVAS_SIZE - drawWidth) / 2;
+						offsetY = 0;
+					} else {
+						drawWidth = CANVAS_SIZE;
+						drawHeight = CANVAS_SIZE / aspectRatio;
+						offsetX = 0;
+						offsetY = (CANVAS_SIZE - drawHeight) / 2;
+					}
+
+					context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+					context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+
+					// Update the current input hash after loading new content
+					currentInputHash = await generateInputImageHash();
+
+					notifySuccess('Image loaded successfully');
+				};
+			};
+			reader.readAsDataURL(processedFile);
+		} catch (error) {
+			console.error('Error processing dropped image:', error);
+			notifyError('Failed to process image. Please try again.');
+		}
+	}
+
+	// Drag and drop event handlers
+	function handleDragOver(event) {
+		event.preventDefault();
+		dragOver = true;
+	}
+
+	function handleDragLeave(event) {
+		event.preventDefault();
+		dragOver = false;
+	}
+
+	function handleDrop(event) {
+		event.preventDefault();
+		dragOver = false;
+		const files = event.dataTransfer.files;
+		if (files.length > 0) {
+			processDroppedFile(files[0]);
+		}
 	}
 
 	// Transfer - send canvas to API with validation and error handling
@@ -507,7 +591,15 @@
 	<!-- Main viewport with split-screen -->
 	<div class="main-viewport" role="main" aria-label="Image transformation interface">
 		<!-- Left Panel (Input) -->
-		<div class="panel panel-left" aria-label="Input image panel">
+		<div 
+			class="panel panel-left" 
+			class:drag-over={dragOver}
+			role="region"
+			aria-label="Input image panel - drag and drop images here"
+			ondragover={handleDragOver}
+			ondragleave={handleDragLeave}
+			ondrop={handleDrop}
+		>
 			<canvas
 				bind:this={canvasElement}
 				width={CANVAS_SIZE}
@@ -675,6 +767,11 @@
 
 	.panel-left {
 		background-color: var(--color-panel-light);
+	}
+
+	.panel-left.drag-over {
+		background-color: rgba(255, 107, 74, 0.1);
+		border: 2px dashed var(--color-accent);
 	}
 
 	.panel-right {

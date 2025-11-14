@@ -154,6 +154,9 @@
 		width: 100%;
 		max-width: 1200px;
 		margin-top: 2rem;
+		padding: 1em;
+		background: #171717;
+		border-radius: 1em;
 	}
 
 	.history-header {
@@ -164,10 +167,12 @@
 	}
 
 	.history-title {
-		font-size: 1.5rem;
-		font-weight: 300;
+		font-size: 1.875rem;
+    font-weight: 300;
+    font-style: italic;
 		color: white;
 		margin: 0;
+		margin-left: 1rem;
 	}
 
 	.history-controls {
