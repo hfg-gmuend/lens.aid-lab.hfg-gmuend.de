@@ -157,6 +157,7 @@
 		padding: 1em;
 		background: #171717;
 		border-radius: 1em;
+		margin-bottom: 2rem;
 	}
 
 	.history-header {
@@ -316,7 +317,6 @@
 		justify-content: space-between;
 		padding: 0.75rem;
 		gap: 0.5rem;
-		background-color: rgba(0, 0, 0, 0.3);
 	}
 
 	.history-image {
