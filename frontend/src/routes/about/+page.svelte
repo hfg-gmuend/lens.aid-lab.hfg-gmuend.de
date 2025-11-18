@@ -42,7 +42,7 @@
 	];
 
 	const contributors = [
-		{ name: 'Jordi Trost', role: 'Workshop' },
+		{ name: 'Jordi Tost', role: 'Concept' },
 		{ name: 'Christopher Pietsch', role: 'Engineering' }
 	];
 </script>
@@ -55,8 +55,8 @@
 
 	<section class="hero">
 		<p class="lead">
-			Futures Lens is a speculative design tool that helps studios and classrooms prototype alternative futures.
-			Capture familiar objects, prompt new contexts, and grow a catalog of transformed artifacts that reveal how
+			Futures Lens is a speculative design tool that fosters reflection on possible futures. 
+			Capture familiar objects, prompt new contexts, and grow a catalog of transformed artifacts that reveal how 
 			AI can expand the imaginative range of design practice.
 		</p>
 	</section>
