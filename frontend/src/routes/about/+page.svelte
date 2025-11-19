@@ -43,7 +43,7 @@
 
 	const contributors = [
 		{ name: 'Jordi Tost', role: 'Concept' },
-		{ name: 'Christopher Pietsch', role: 'Engineering' }
+		{ name: 'Christopher Pietsch', role: 'AI Pipeline & Engineering' }
 	];
 </script>
 

@@ -15,6 +15,8 @@ const defaultSettings = {
 	maxHistoryItems: 20,
 	imageQuality: 0.8,
 	compressionEnabled: true
+	,seedLock: false,
+	lockedSeed: -1
 };
 
 /**

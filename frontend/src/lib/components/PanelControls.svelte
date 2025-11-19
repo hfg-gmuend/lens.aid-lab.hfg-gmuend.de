@@ -4,6 +4,7 @@
 	import camera from '$lib/assets/icons/camera.svg?raw';
 	import check from '$lib/assets/icons/check.svg?raw';
 	import download from '$lib/assets/icons/download.svg?raw';
+    import lock from '$lib/assets/icons/lock.svg?raw';
 
 	let {
 		position = 'top-left', // 'top-left' or 'bottom-right'
@@ -14,6 +15,8 @@
 		onUpload = () => {},
 		onCheck = () => {},
 		onDownload = () => {}
+		, lockActive = false
+		, onToggleLock = () => {}
 	} = $props();
 </script>
 
@@ -37,6 +40,16 @@
 		>
 			<Icon src={download} size={28} />
 		</button>
+
+			<button
+				class="icon-button"
+				class:active={lockActive}
+				onclick={onToggleLock}
+				aria-pressed={lockActive}
+				aria-label="Toggle seed lock"
+			>
+				<Icon src={lock} size={18} />
+			</button>
 	{/if}
 </div>
 

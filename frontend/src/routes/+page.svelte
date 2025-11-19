@@ -28,6 +28,9 @@
 	let promptValue = $state('');
 	let denoise = $state($settings.denoise); // 0.4-1.0 range, loaded from settings
 	let seed = $state(-1);
+	// Seed lock state
+	let seedLocked = $state($settings.seedLock);
+	let lockedSeed = $state($settings.lockedSeed ?? -1);
 
 	// UI State
 	let showPromptLibrary = $state(false);
@@ -61,6 +64,14 @@
 
 	$effect(() => {
 		settings.updateSetting('historyViewMode', historyViewMode);
+	});
+
+	$effect(() => {
+		settings.updateSetting('seedLock', seedLocked);
+	});
+
+	$effect(() => {
+		settings.updateSetting('lockedSeed', lockedSeed);
 	});
 
 	$effect(() => {
@@ -359,6 +370,17 @@
 				redirect: 'true'
 			};
 
+			// If the seed is locked, ensure a locked seed exists and use it
+			if (seedLocked) {
+				if (lockedSeed === -1) {
+					// generate a seed to lock
+					lockedSeed = Math.floor(Math.random() * 1e9);
+				}
+				params.seed = lockedSeed.toString();
+			} else {
+				params.seed = '-1';
+			}
+
 			// Upload with retry logic
 			const data = await uploadImage(
 				API_URL,
@@ -397,6 +419,13 @@
 				denoise: data.denoise,
 				seed: data.seed
 			};
+
+			// Update local seed if not locked; if locked and lockedSeed unset, set from response
+			if (!seedLocked) {
+				seed = data.seed;
+			} else if (lockedSeed === -1) {
+				lockedSeed = data.seed;
+			}
 
 			// Add to prompt history
 			promptHistory.add(cleanPrompt);
@@ -502,6 +531,14 @@
 		showComparison = true;
 	}
 
+	function toggleSeedLock() {
+		seedLocked = !seedLocked;
+		if (seedLocked && lockedSeed === -1) {
+			// Initialize a locked seed if none exists yet
+			lockedSeed = seed !== -1 ? seed : Math.floor(Math.random() * 1e9);
+		}
+	}
+
 	// History management - now handled by historyDB store
 
 	function loadFromHistory(item) {
@@ -530,7 +567,10 @@
 		// Restore parameters
 		promptValue = item.prompt;
 		denoise = item.denoise;
-		seed = item.seed;
+		// Only restore seed if it's not locked
+		if (!seedLocked) {
+			seed = item.seed;
+		}
 	}
 
 	// History deletion handlers
@@ -655,6 +695,8 @@
 				downloadDisabled={!resultImage}
 				onCheck={handleSaveToHistory}
 				onDownload={handleDownload}
+				lockActive={seedLocked}
+				onToggleLock={toggleSeedLock}
 			/>
 		</div>
 
