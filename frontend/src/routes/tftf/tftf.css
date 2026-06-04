@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;600;700;800&family=Geist+Mono:wght@400;500&display=swap');
+
+:root {
+    --bg: #f4f2ee;
+    --surface: #ffffff;
+    --surface2: #eceae5;
+    --border: #d4d0c8;
+    --border-strong: #b8b4aa;
+    --accent1: #2e7d5e;
+    --accent2: #1a5fa8;
+    --accent3: #b03040;
+    --accent4: #7030a0;
+    --text: #1a1814;
+    --text2: #4a4640;
+    --muted: #888480;
+    --card-a-bg: #e8f5ef;
+    --card-a-border: #a8d8c0;
+    --card-t-bg: #e8f0fa;
+    --card-t-border: #a8c4e8;
+    --card-o-bg: #faeaec;
+    --card-o-border: #f0b8c0;
+    --card-m-bg: #f0e8fa;
+    --card-m-border: #d4b0f0;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Geist', sans-serif;
+    background-color: var(--bg, #f4f2ee) !important; /* important to override the main app.css */
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.25;
+    pointer-events: none;
+    z-index: 0;
+}
+
+header {
+    max-height: 217.13px; /* small cosmetic correction */
+}
