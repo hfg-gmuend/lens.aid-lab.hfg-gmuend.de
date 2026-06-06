@@ -1,8 +1,8 @@
-# Future Lens
+# Futures Lens
 
-Future Lens is a speculative design web app for transforming everyday objects into alternative future scenarios with AI. The interface combines image capture/upload, prompt-driven image generation, local history, and a canvas view for exploring transformation paths. Future Lens is based on the Transferscope Project.
+Futures Lens is a speculative design web app for transforming everyday objects into alternative future scenarios with AI. The interface combines image capture/upload, prompt-driven image generation, local history, and a canvas view for exploring transformation paths. Futures Lens is based on the Transferscope Project.
 
-![Future Lens interface](./ui/index.png)
+![Futures Lens interface](./ui/index.png)
 
 ## What it does
 
