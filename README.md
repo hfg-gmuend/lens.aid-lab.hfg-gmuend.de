@@ -16,7 +16,7 @@ Future Lens is a speculative design web app for transforming everyday objects in
 
 ## Tech stack
 
-- **Frontend:** SvelteKit 2 / Svelte 5 / Vite 7
+- **Frontend:** SvelteKit / Svelte 5 / Vite 7
 - **Styling:** Tailwind CSS v4 plus app CSS custom theme tokens
 - **Canvas graph:** Konva via `svelte-konva`
 - **Persistence:** IndexedDB with migration from older `localStorage` history
