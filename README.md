@@ -1,8 +1,8 @@
-# Futures Lens
+# Future Lens
 
-Futures Lens is a speculative design web app for transforming everyday objects into alternative future scenarios with AI. The interface combines image capture/upload, prompt-driven image generation, local history, and a canvas view for exploring transformation paths.
+Future Lens is a speculative design web app for transforming everyday objects into alternative future scenarios with AI. The interface combines image capture/upload, prompt-driven image generation, local history, and a canvas view for exploring transformation paths.
 
-![Futures Lens interface](./ui/index.png)
+![Future Lens interface](./ui/index.png)
 
 ## What it does
 
@@ -17,7 +17,7 @@ Futures Lens is a speculative design web app for transforming everyday objects i
 ## Tech stack
 
 - **Frontend:** SvelteKit 2 / Svelte 5 / Vite 7
-- **Styling:** app CSS with custom theme tokens
+- **Styling:** Tailwind CSS v4 plus app CSS custom theme tokens
 - **Canvas graph:** Konva via `svelte-konva`
 - **Persistence:** IndexedDB with migration from older `localStorage` history
 - **Testing:** Playwright end-to-end tests
@@ -50,7 +50,7 @@ Futures Lens is a speculative design web app for transforming everyday objects i
 ### Install
 
 ```bash
-cd /tmp/workspace/hfg-gmuend/lens.aid-lab.hfg-gmuend.de/frontend
+cd frontend
 npm ci
 ```
 
@@ -64,7 +64,7 @@ Then open the local Vite/SvelteKit URL shown in the terminal.
 
 ## Available scripts
 
-Run these inside `/tmp/workspace/hfg-gmuend/lens.aid-lab.hfg-gmuend.de/frontend`:
+Run these inside `frontend/`:
 
 ```bash
 npm run dev      # start local dev server
